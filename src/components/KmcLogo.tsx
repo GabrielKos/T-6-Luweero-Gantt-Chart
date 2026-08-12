@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface KmcLogoProps {
   className?: string;
 }
 
 export const KmcLogo: React.FC<KmcLogoProps> = ({ className = "h-7" }) => {
+  const [imgError, setImgError] = useState(false);
+
+  // Google Drive file ID: 14LT4qnflbiBeF7xaG9HusblSDW7EYA1_
+  const driveImgUrl = "https://lh3.googleusercontent.com/d/14LT4qnflbiBeF7xaG9HusblSDW7EYA1_";
+
+  if (!imgError) {
+    return (
+      <div className={`flex items-center shrink-0 ${className}`}>
+        <img
+          src={driveImgUrl}
+          alt="Kiira Motors Corporation Logo"
+          className="h-full w-auto object-contain max-h-8"
+          onError={() => setImgError(true)}
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`flex items-center shrink-0 ${className}`}>
       <svg

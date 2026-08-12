@@ -1,5 +1,6 @@
 import React from 'react';
 import { ViewOption } from '../types';
+import { CalendarRange, Calendar } from 'lucide-react';
 
 export const TIME_VIEWS: ViewOption[] = [
   { id: "overall", name: "Overall FY26/27", start: "2026-07-01", end: "2027-06-30", type: "months" },
@@ -24,19 +25,39 @@ interface TimeViewTabsProps {
 
 export const TimeViewTabs: React.FC<TimeViewTabsProps> = ({ currentViewId, onSelectView }) => {
   return (
-    <div className="px-4 sm:px-6 flex gap-4 overflow-x-auto border-t border-b border-slate-200 bg-white shrink-0 scrollbar-none">
+    <div className="px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto bg-slate-800 border-y border-slate-700/80 shrink-0 scrollbar-none shadow-inner">
       {TIME_VIEWS.map((view) => {
         const isActive = view.id === currentViewId;
+        const isOverall = view.id === "overall";
+
+        if (isOverall) {
+          return (
+            <button
+              key={view.id}
+              onClick={() => onSelectView(view.id)}
+              className={`py-1.5 px-3.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-all flex items-center gap-1.5 border ${
+                isActive
+                  ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm ring-2 ring-amber-300/50'
+                  : 'bg-amber-950/40 text-amber-300 border-amber-500/40 hover:bg-amber-900/60'
+              }`}
+            >
+              <CalendarRange className={`w-3.5 h-3.5 ${isActive ? 'text-slate-950' : 'text-amber-400'}`} />
+              {view.name}
+            </button>
+          );
+        }
+
         return (
           <button
             key={view.id}
             onClick={() => onSelectView(view.id)}
-            className={`py-3 px-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-all border-b-2 ${
+            className={`py-1.5 px-3 text-xs uppercase tracking-wider whitespace-nowrap rounded-lg transition-all flex items-center gap-1 border ${
               isActive
-                ? 'border-blue-600 text-blue-600 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                ? 'bg-white text-slate-900 font-bold border-slate-200 shadow-xs'
+                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white font-medium border-slate-600/40'
             }`}
           >
+            <Calendar className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
             {view.name}
           </button>
         );
@@ -44,3 +65,4 @@ export const TimeViewTabs: React.FC<TimeViewTabsProps> = ({ currentViewId, onSel
     </div>
   );
 };
+
