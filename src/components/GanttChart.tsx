@@ -56,49 +56,32 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     const timeEl = timelineScrollRef.current;
     if (!listEl || !timeEl) return;
 
-    let activeSource: 'list' | 'time' | null = null;
-    let resetTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const resetActiveSource = () => {
-      if (resetTimer) clearTimeout(resetTimer);
-      resetTimer = setTimeout(() => {
-        activeSource = null;
-      }, 120);
-    };
+    let isSyncing = false;
 
     const handleListScroll = () => {
-      if (activeSource === 'time') return;
-      activeSource = 'list';
+      if (isSyncing) return;
+      isSyncing = true;
       timeEl.scrollTop = listEl.scrollTop;
-      resetActiveSource();
+      requestAnimationFrame(() => {
+        isSyncing = false;
+      });
     };
 
     const handleTimeScroll = () => {
-      if (activeSource === 'list') return;
-      activeSource = 'time';
+      if (isSyncing) return;
+      isSyncing = true;
       listEl.scrollTop = timeEl.scrollTop;
-      resetActiveSource();
+      requestAnimationFrame(() => {
+        isSyncing = false;
+      });
     };
-
-    const setListActive = () => { activeSource = 'list'; };
-    const setTimeActive = () => { activeSource = 'time'; };
 
     listEl.addEventListener('scroll', handleListScroll, { passive: true });
     timeEl.addEventListener('scroll', handleTimeScroll, { passive: true });
 
-    listEl.addEventListener('mouseenter', setListActive, { passive: true });
-    listEl.addEventListener('touchstart', setListActive, { passive: true });
-    timeEl.addEventListener('mouseenter', setTimeActive, { passive: true });
-    timeEl.addEventListener('touchstart', setTimeActive, { passive: true });
-
     return () => {
-      if (resetTimer) clearTimeout(resetTimer);
       listEl.removeEventListener('scroll', handleListScroll);
       timeEl.removeEventListener('scroll', handleTimeScroll);
-      listEl.removeEventListener('mouseenter', setListActive);
-      listEl.removeEventListener('touchstart', setListActive);
-      timeEl.removeEventListener('mouseenter', setTimeActive);
-      timeEl.removeEventListener('touchstart', setTimeActive);
     };
   }, []);
 
@@ -182,10 +165,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
         {/* ================= LEFT PANE: Task List ================= */}
         <div 
-          className={`shrink-0 bg-white border-r border-slate-200 flex flex-col shadow-xs z-20 transition-all duration-200 ${
+          className={`shrink-0 bg-white border-r border-slate-200 flex flex-col min-h-0 shadow-xs z-20 transition-all duration-200 ${
             mobilePane === 'timeline' ? 'hidden md:flex md:w-[320px] lg:w-[420px]' : 
             mobilePane === 'tasks' ? 'w-full md:w-[320px] lg:w-[420px]' : 
             'w-[150px] sm:w-[260px] md:w-[320px] lg:w-[420px]'
@@ -200,7 +183,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           </div>
 
           {/* List Content */}
-          <div ref={listScrollRef} className="overflow-y-auto flex-1 custom-scrollbar pb-24 touch-pan-y">
+          <div ref={listScrollRef} className="overflow-y-auto min-h-0 flex-1 custom-scrollbar pb-24 touch-pan-y">
             {visibleTasks.length === 0 ? (
               <div className="p-6 text-center text-slate-400 text-xs font-medium">
                 No WBS tasks found.
@@ -247,16 +230,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
         {/* ================= RIGHT PANE: Timeline Canvas ================= */}
         <div 
-          className={`flex-1 flex flex-col relative overflow-hidden bg-slate-50/50 ${
+          className={`flex-1 flex flex-col min-h-0 relative overflow-hidden bg-slate-50/50 ${
             mobilePane === 'tasks' ? 'hidden md:flex' : 'flex'
           }`}
         >
-          {/* Scrollable Timeline Container */}
-          <div className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden custom-scrollbar relative">
-            {/* Timeline Wrapper with min-width for mobile swiping */}
-            <div className="min-w-[640px] sm:min-w-full flex-1 flex flex-col relative">
-              {/* Header Scale (Days or Months) */}
-              <div className="bg-slate-100 border-b border-slate-200 flex shrink-0 shadow-xs z-20 h-10 items-center relative">
+          {/* Scrollable Timeline Container (both X and Y scrolling) */}
+          <div 
+            ref={timelineScrollRef} 
+            className="flex-1 min-h-0 overflow-auto relative custom-scrollbar pb-24 touch-pan-x touch-pan-y"
+          >
+            <div className="min-w-[700px] sm:min-w-[1000px] relative min-h-full flex flex-col">
+              {/* Header Scale (Days or Months) - Sticky Top */}
+              <div className="sticky top-0 z-30 bg-slate-100 border-b border-slate-200 flex shrink-0 shadow-xs h-10 items-center">
                 {headerCells.map((cell, i) => (
                   <div
                     key={i}
@@ -268,64 +253,62 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 ))}
               </div>
 
-              {/* Timeline Scroll Area */}
-              <div ref={timelineScrollRef} className="flex-1 overflow-y-auto relative custom-scrollbar pb-24 touch-pan-x touch-pan-y">
-                <div className="min-w-full min-h-full relative inline-block w-full">
-                  {/* Background Grid Lines */}
-                  <div className="absolute inset-0 pointer-events-none flex h-full">
-                    {headerCells.map((cell, i) => (
-                      <div
-                        key={i}
-                        style={{ width: `${cell.widthPct}%` }}
-                        className="border-r border-slate-200/50 shrink-0 h-full"
-                      />
-                    ))}
-                  </div>
-
-                  {/* Simulation Today Line */}
-                  {showTodayLine && (
+              {/* Chart Grid Lines & Bars */}
+              <div className="relative min-w-full flex-1">
+                {/* Background Grid Lines */}
+                <div className="absolute inset-0 pointer-events-none flex h-full">
+                  {headerCells.map((cell, i) => (
                     <div
-                      className="absolute top-0 bottom-0 w-[2px] bg-blue-600 z-30 leader-line pointer-events-none"
-                      style={{ left: `${todayLeftPct}%` }}
-                    >
-                      <div className="sticky top-1 -translate-x-1/2 left-[1px] bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm whitespace-nowrap uppercase tracking-wider flex items-center gap-1 border border-blue-500">
-                        <Calendar className="w-3 h-3 text-white" />
-                        Sim: {formattedSimDate}
-                      </div>
+                      key={i}
+                      style={{ width: `${cell.widthPct}%` }}
+                      className="border-r border-slate-200/50 shrink-0 h-full"
+                    />
+                  ))}
+                </div>
+
+                {/* Simulation Today Line */}
+                {showTodayLine && (
+                  <div
+                    className="absolute top-0 bottom-0 w-[2px] bg-blue-600 z-20 leader-line pointer-events-none"
+                    style={{ left: `${todayLeftPct}%` }}
+                  >
+                    <div className="sticky top-11 -translate-x-1/2 left-[1px] bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm whitespace-nowrap uppercase tracking-wider flex items-center gap-1 border border-blue-500">
+                      <Calendar className="w-3 h-3 text-white" />
+                      Sim: {formattedSimDate}
                     </div>
-                  )}
-
-                  {/* Gantt Bars List */}
-                  <div className="pt-0 z-20 relative min-w-full">
-                    {layout === 'officer' ? (
-                      groupedTasks.map((group) => (
-                        <React.Fragment key={`gantt-group-${group.lead}`}>
-                          {/* Empty spacer row for group header */}
-                          <div className="w-full bg-slate-200/50 h-10 border-y border-slate-300 relative" />
-
-                          {group.items.map((task) => (
-                            <GanttBarItem
-                              key={`bar-${task.id}`}
-                              task={task}
-                              viewStartMs={viewStartMs}
-                              totalMs={totalMs}
-                              simMs={simMs}
-                            />
-                          ))}
-                        </React.Fragment>
-                      ))
-                    ) : (
-                      visibleTasks.map((task) => (
-                        <GanttBarItem
-                          key={`bar-${task.id}`}
-                          task={task}
-                          viewStartMs={viewStartMs}
-                          totalMs={totalMs}
-                          simMs={simMs}
-                        />
-                      ))
-                    )}
                   </div>
+                )}
+
+                {/* Gantt Bars List */}
+                <div className="pt-0 z-10 relative min-w-full">
+                  {layout === 'officer' ? (
+                    groupedTasks.map((group) => (
+                      <React.Fragment key={`gantt-group-${group.lead}`}>
+                        {/* Empty spacer row for group header */}
+                        <div className="w-full bg-slate-200/50 h-10 border-y border-slate-300 relative" />
+
+                        {group.items.map((task) => (
+                          <GanttBarItem
+                            key={`bar-${task.id}`}
+                            task={task}
+                            viewStartMs={viewStartMs}
+                            totalMs={totalMs}
+                            simMs={simMs}
+                          />
+                        ))}
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    visibleTasks.map((task) => (
+                      <GanttBarItem
+                        key={`bar-${task.id}`}
+                        task={task}
+                        viewStartMs={viewStartMs}
+                        totalMs={totalMs}
+                        simMs={simMs}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
             </div>

@@ -239,7 +239,7 @@ export default function App() {
       />
 
       {/* Main Gantt Body */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-white relative">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-white relative">
         <GanttChart
           tasks={filteredTasks}
           currentView={currentView}
