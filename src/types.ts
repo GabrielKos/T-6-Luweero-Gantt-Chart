@@ -55,6 +55,7 @@ export interface ViewOption {
 
 export interface FilterState {
   lead: string;
+  support: string;
   package: string;
   status: string;
   priority: string;

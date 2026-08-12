@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FilterState } from '../types';
 import { 
   SlidersHorizontal, 
   FolderOpen, 
   UserCheck, 
+  Users,
   Plus, 
   Share2, 
   Download, 
   Search, 
   AlertTriangle,
-  FileSpreadsheet,
+  ChevronDown,
+  ChevronUp,
   Check
 } from 'lucide-react';
 
@@ -17,6 +19,7 @@ interface FilterBarProps {
   filters: FilterState;
   onFilterChange: (updated: Partial<FilterState>) => void;
   leadOfficers: string[];
+  supportingMembers?: string[];
   workPackages: string[];
   onAddNewTask: () => void;
   onExport: () => void;
@@ -28,172 +31,206 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
   leadOfficers,
+  supportingMembers = [],
   workPackages,
   onAddNewTask,
   onExport,
   onShareLink,
   isCopied
 }) => {
-  return (
-    <div className="px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-900 to-blue-950 border border-slate-800 m-2 sm:m-4 rounded-xl shadow-md relative overflow-hidden text-white shrink-0">
-      {/* Subtle ambient highlight */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+  // Collapsible state: compact by default on small screens (<768px)
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
+  });
 
-      {/* Top Header Row in Filter Hub */}
-      <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-        <div>
-          <h2 className="text-white text-base sm:text-lg font-bold flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-blue-400" />
-            Interactive Workplan Controls
-          </h2>
+  const isFiltered = filters.searchQuery || filters.lead !== 'ALL' || filters.support !== 'ALL' || filters.package !== 'ALL' || filters.isCriticalOnly;
+
+  return (
+    <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-slate-900 via-slate-900 to-blue-950 border border-slate-800 m-1.5 sm:m-3 rounded-xl shadow-md relative text-white shrink-0">
+      {/* Ambient highlight */}
+      <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      {/* Top Bar Row */}
+      <div className="relative z-10 flex flex-wrap justify-between items-center gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-2 text-white hover:text-blue-300 font-bold text-xs sm:text-sm transition-colors py-1 px-1.5 rounded-lg hover:bg-slate-800/80"
+            title={isExpanded ? "Collapse Controls" : "Expand Controls"}
+          >
+            <SlidersHorizontal className="w-4 h-4 text-blue-400" />
+            <span>Interactive Controls</span>
+            {isExpanded ? (
+              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            )}
+          </button>
+
+          {!isExpanded && isFiltered && (
+            <span className="text-[10px] bg-blue-600/80 text-white font-semibold px-2 py-0.5 rounded-full">
+              Filtered
+            </span>
+          )}
         </div>
 
-        {/* Layout & Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* View Mode Toggle */}
-          <div className="flex bg-slate-800/90 rounded-lg p-1 border border-slate-700/80 shadow-inner">
-            <button
-              onClick={() => onFilterChange({ layout: 'timeline' })}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
-                filters.layout === 'timeline' 
-                  ? 'bg-blue-600 text-white shadow-xs' 
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <FolderOpen className="w-3.5 h-3.5" /> Timeline View
-            </button>
-            <button
-              onClick={() => onFilterChange({ layout: 'officer' })}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
-                filters.layout === 'officer' 
-                  ? 'bg-blue-600 text-white shadow-xs' 
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" /> Lead Officer View
-            </button>
-          </div>
-
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Add Task Button */}
           <button
             onClick={onAddNewTask}
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shadow-xs border border-emerald-500"
+            className="px-2.5 sm:px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-emerald-500"
           >
-            <Plus className="w-4 h-4" /> Add Task
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden xs:inline">Add Task</span>
           </button>
 
           {/* Shareable Link Button */}
           <button
             onClick={onShareLink}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shadow-xs border ${
+            className={`px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border ${
               isCopied
                 ? 'bg-emerald-600 border-emerald-500 text-white'
                 : 'bg-slate-800 hover:bg-slate-700/90 border-slate-700 text-slate-200'
             }`}
-            title="Copy shareable link for team members"
+            title="Copy shareable link"
           >
             {isCopied ? <Check className="w-3.5 h-3.5 text-white" /> : <Share2 className="w-3.5 h-3.5 text-blue-400" />}
-            {isCopied ? 'Link Copied!' : 'Share Link'}
+            <span className="hidden sm:inline">{isCopied ? 'Copied' : 'Share'}</span>
           </button>
 
-          {/* Export PDF / Print Button */}
+          {/* Export PDF Button */}
           <button
             onClick={onExport}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shadow-xs border border-blue-500"
+            className="px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-blue-500"
+            title="Export PDF / Print"
           >
-            <Download className="w-3.5 h-3.5" /> Export PDF
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
 
-      {/* Filters Grid */}
-      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-        {/* Search */}
-        <div>
-          <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
-            Search Activity
-          </label>
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search tasks or officer..."
-              value={filters.searchQuery}
-              onChange={(e) => onFilterChange({ searchQuery: e.target.value })}
-              className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-medium rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-blue-400 transition-colors placeholder:text-slate-500"
-            />
+      {/* Expanded Controls Grid */}
+      {isExpanded && (
+        <div className="relative z-10 pt-3 mt-2.5 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 animate-in fade-in duration-150">
+          {/* View Mode Toggle */}
+          <div className="sm:col-span-2 md:col-span-2 lg:col-span-2">
+            <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+              View Layout
+            </label>
+            <div className="flex bg-slate-800/90 rounded-lg p-0.5 border border-slate-700/80">
+              <button
+                onClick={() => onFilterChange({ layout: 'timeline' })}
+                className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1 ${
+                  filters.layout === 'timeline' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <FolderOpen className="w-3 h-3" /> Timeline
+              </button>
+              <button
+                onClick={() => onFilterChange({ layout: 'officer' })}
+                className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1 ${
+                  filters.layout === 'officer' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <UserCheck className="w-3 h-3" /> Lead Officer
+              </button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div>
+            <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+              Search
+            </label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={filters.searchQuery}
+                onChange={(e) => onFilterChange({ searchQuery: e.target.value })}
+                className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-medium rounded-lg pl-8 pr-2 py-1 focus:outline-none focus:border-blue-400 transition-colors placeholder:text-slate-500"
+              />
+            </div>
+          </div>
+
+          {/* Lead Officer */}
+          <div>
+            <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+              Lead Officer
+            </label>
+            <select
+              value={filters.lead}
+              onChange={(e) => onFilterChange({ lead: e.target.value })}
+              className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400 transition-colors cursor-pointer"
+            >
+              <option value="ALL">-- All Leads --</option>
+              {leadOfficers.map((lead) => (
+                <option key={lead} value={lead} className="bg-slate-900 text-slate-100">{lead}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Supporting Member */}
+          <div>
+            <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+              Supporting Member
+            </label>
+            <select
+              value={filters.support || 'ALL'}
+              onChange={(e) => onFilterChange({ support: e.target.value })}
+              className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400 transition-colors cursor-pointer"
+            >
+              <option value="ALL">-- All Support --</option>
+              {supportingMembers.map((member) => (
+                <option key={member} value={member} className="bg-slate-900 text-slate-100">{member}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Work Package */}
+          <div>
+            <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+              Package
+            </label>
+            <select
+              value={filters.package}
+              onChange={(e) => onFilterChange({ package: e.target.value })}
+              className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400 transition-colors cursor-pointer"
+            >
+              <option value="ALL">-- All Packages --</option>
+              {workPackages.map((wp) => (
+                <option key={wp} value={wp} className="bg-slate-900 text-slate-100">{wp}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Critical Only Toggle */}
+          <div>
+            <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+              Urgency
+            </label>
+            <button
+              onClick={() => onFilterChange({ isCriticalOnly: !filters.isCriticalOnly })}
+              className={`w-full text-xs font-semibold rounded-lg px-2 py-1 transition-all flex items-center justify-center gap-1 border ${
+                filters.isCriticalOnly
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 border-slate-700'
+              }`}
+            >
+              <AlertTriangle className={`w-3 h-3 ${filters.isCriticalOnly ? 'text-white' : 'text-amber-400'}`} />
+              {filters.isCriticalOnly ? 'Critical Only' : 'All Tasks'}
+            </button>
           </div>
         </div>
-
-        {/* Lead Officer */}
-        <div>
-          <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
-            Lead Officer
-          </label>
-          <select
-            value={filters.lead}
-            onChange={(e) => onFilterChange({ lead: e.target.value })}
-            className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 transition-colors cursor-pointer"
-          >
-            <option value="ALL">-- All Leads --</option>
-            {leadOfficers.map((lead) => (
-              <option key={lead} value={lead} className="bg-slate-900 text-slate-100">{lead}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Work Package */}
-        <div>
-          <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
-            Work Package
-          </label>
-          <select
-            value={filters.package}
-            onChange={(e) => onFilterChange({ package: e.target.value })}
-            className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 transition-colors cursor-pointer"
-          >
-            <option value="ALL">-- All Packages --</option>
-            {workPackages.map((wp) => (
-              <option key={wp} value={wp} className="bg-slate-900 text-slate-100">{wp}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Task Status */}
-        <div>
-          <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
-            Task Status
-          </label>
-          <select
-            value={filters.status}
-            onChange={(e) => onFilterChange({ status: e.target.value })}
-            className="w-full bg-slate-800/90 border border-slate-700 text-slate-100 text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 transition-colors cursor-pointer"
-          >
-            <option value="ALL" className="bg-slate-900 text-slate-100">-- All Statuses --</option>
-            <option value="COMPLETED" className="bg-slate-900 text-slate-100">Completed</option>
-            <option value="PENDING" className="bg-slate-900 text-slate-100">Pending</option>
-            <option value="OVERDUE" className="bg-slate-900 text-slate-100">Overdue</option>
-          </select>
-        </div>
-
-        {/* Critical Only Toggle */}
-        <div>
-          <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
-            Urgency Filter
-          </label>
-          <button
-            onClick={() => onFilterChange({ isCriticalOnly: !filters.isCriticalOnly })}
-            className={`w-full text-xs font-semibold rounded-lg px-3 py-1.5 transition-all flex items-center justify-center gap-1.5 border ${
-              filters.isCriticalOnly
-                ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 border-slate-700'
-            }`}
-          >
-            <AlertTriangle className={`w-3.5 h-3.5 ${filters.isCriticalOnly ? 'text-white' : 'text-amber-400'}`} />
-            {filters.isCriticalOnly ? 'Critical Only (Active)' : 'Show Critical Only'}
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
+

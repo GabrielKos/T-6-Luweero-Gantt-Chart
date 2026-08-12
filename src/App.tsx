@@ -35,6 +35,7 @@ export default function App() {
   // Filter State
   const [filters, setFilters] = useState<FilterState>({
     lead: 'ALL',
+    support: 'ALL',
     package: 'ALL',
     status: 'ALL',
     priority: 'ALL',
@@ -83,10 +84,23 @@ export default function App() {
     return () => unsubscribeLogs();
   }, []);
 
-  // Extract unique Lead Officers and Work Packages for filters
+  // Extract unique Lead Officers, Supporting Members, and Work Packages for filters
   const leadOfficers = useMemo(() => {
     const set = new Set<string>();
     tasks.forEach(t => { if (t.lead) set.add(t.lead); });
+    return Array.from(set).sort();
+  }, [tasks]);
+
+  const supportingMembers = useMemo(() => {
+    const set = new Set<string>();
+    tasks.forEach(t => {
+      if (t.support) {
+        t.support.split(',').forEach(s => {
+          const trimmed = s.trim();
+          if (trimmed) set.add(trimmed);
+        });
+      }
+    });
     return Array.from(set).sort();
   }, [tasks]);
 
@@ -105,6 +119,13 @@ export default function App() {
 
       // Lead Officer
       if (filters.lead !== 'ALL' && t.lead !== filters.lead) matches = false;
+
+      // Supporting Member
+      if (filters.support && filters.support !== 'ALL') {
+        if (!t.support || !t.support.toLowerCase().includes(filters.support.toLowerCase())) {
+          matches = false;
+        }
+      }
 
       // Work Package
       if (filters.package !== 'ALL' && t.wp !== filters.package) matches = false;
@@ -203,6 +224,7 @@ export default function App() {
         filters={filters}
         onFilterChange={(updated) => setFilters(prev => ({ ...prev, ...updated }))}
         leadOfficers={leadOfficers}
+        supportingMembers={supportingMembers}
         workPackages={workPackages}
         onAddNewTask={handleOpenCreateTask}
         onExport={handleExportPDF}

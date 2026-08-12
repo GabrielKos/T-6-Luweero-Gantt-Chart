@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { WBSTask, ViewOption } from '../types';
 import { 
   Check, 
@@ -8,7 +8,10 @@ import {
   UserCheck, 
   Info,
   Calendar,
-  Layers
+  Layers,
+  Columns,
+  List,
+  BarChart3
 } from 'lucide-react';
 
 interface GanttChartProps {
@@ -33,27 +36,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const listScrollRef = useRef<HTMLDivElement>(null);
   const timelineScrollRef = useRef<HTMLDivElement>(null);
 
-  // Synchronize scroll between left pane and right pane
-  useEffect(() => {
-    const listEl = listScrollRef.current;
-    const timeEl = timelineScrollRef.current;
-    if (!listEl || !timeEl) return;
-
-    const handleListScroll = () => {
-      timeEl.scrollTop = listEl.scrollTop;
-    };
-    const handleTimeScroll = () => {
-      listEl.scrollTop = timeEl.scrollTop;
-    };
-
-    listEl.addEventListener('scroll', handleListScroll);
-    timeEl.addEventListener('scroll', handleTimeScroll);
-
-    return () => {
-      listEl.removeEventListener('scroll', handleListScroll);
-      timeEl.removeEventListener('scroll', handleTimeScroll);
-    };
-  }, []);
+  // Mobile Pane Focus Mode: 'split' | 'tasks' | 'timeline'
+  const [mobilePane, setMobilePane] = useState<'split' | 'tasks' | 'timeline'>('split');
 
   const viewStartMs = new Date(`${currentView.start}T00:00:00`).getTime();
   const viewEndMs = new Date(`${currentView.end}T23:59:59`).getTime();
@@ -65,6 +49,64 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   if (currentView.id !== 'overall') {
     visibleTasks = tasks.filter(t => t.startMs <= viewEndMs && t.endMs >= viewStartMs);
   }
+
+  // Synchronize vertical scroll between left pane and right pane without feedback loops
+  useEffect(() => {
+    const listEl = listScrollRef.current;
+    const timeEl = timelineScrollRef.current;
+    if (!listEl || !timeEl) return;
+
+    let activeSource: 'list' | 'time' | null = null;
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const resetActiveSource = () => {
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        activeSource = null;
+      }, 120);
+    };
+
+    const handleListScroll = () => {
+      if (activeSource === 'time') return;
+      activeSource = 'list';
+      timeEl.scrollTop = listEl.scrollTop;
+      resetActiveSource();
+    };
+
+    const handleTimeScroll = () => {
+      if (activeSource === 'list') return;
+      activeSource = 'time';
+      listEl.scrollTop = timeEl.scrollTop;
+      resetActiveSource();
+    };
+
+    const setListActive = () => { activeSource = 'list'; };
+    const setTimeActive = () => { activeSource = 'time'; };
+
+    listEl.addEventListener('scroll', handleListScroll, { passive: true });
+    timeEl.addEventListener('scroll', handleTimeScroll, { passive: true });
+
+    listEl.addEventListener('mouseenter', setListActive, { passive: true });
+    listEl.addEventListener('touchstart', setListActive, { passive: true });
+    timeEl.addEventListener('mouseenter', setTimeActive, { passive: true });
+    timeEl.addEventListener('touchstart', setTimeActive, { passive: true });
+
+    return () => {
+      if (resetTimer) clearTimeout(resetTimer);
+      listEl.removeEventListener('scroll', handleListScroll);
+      timeEl.removeEventListener('scroll', handleTimeScroll);
+      listEl.removeEventListener('mouseenter', setListActive);
+      listEl.removeEventListener('touchstart', setListActive);
+      timeEl.removeEventListener('mouseenter', setTimeActive);
+      timeEl.removeEventListener('touchstart', setTimeActive);
+    };
+  }, []);
+
+  // Reset scroll to top synchronously on view or filter/task change
+  useEffect(() => {
+    if (listScrollRef.current) listScrollRef.current.scrollTop = 0;
+    if (timelineScrollRef.current) timelineScrollRef.current.scrollTop = 0;
+  }, [currentView.id, layout, visibleTasks.length]);
 
   // Group tasks if layout === 'officer'
   let groupedTasks: { lead: string; items: WBSTask[] }[] = [];
@@ -107,31 +149,70 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-white relative">
+      {/* Mobile Screen Navigation Bar (< 768px) */}
+      <div className="md:hidden bg-slate-900 text-slate-200 px-3 py-1.5 flex items-center justify-between border-b border-slate-800 shrink-0 z-30">
+        <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+          <Columns className="w-3 h-3 text-blue-400" /> View Focus:
+        </span>
+        <div className="flex bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+          <button
+            onClick={() => setMobilePane('split')}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-colors ${
+              mobilePane === 'split' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <Columns className="w-3 h-3" /> Split
+          </button>
+          <button
+            onClick={() => setMobilePane('tasks')}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-colors ${
+              mobilePane === 'tasks' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <List className="w-3 h-3" /> Tasks
+          </button>
+          <button
+            onClick={() => setMobilePane('timeline')}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-colors ${
+              mobilePane === 'timeline' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-3 h-3" /> Chart
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-1 overflow-hidden relative">
         {/* ================= LEFT PANE: Task List ================= */}
-        <div className="w-[320px] sm:w-[440px] shrink-0 bg-white border-r border-slate-200 flex flex-col shadow-xs z-20">
+        <div 
+          className={`shrink-0 bg-white border-r border-slate-200 flex flex-col shadow-xs z-20 transition-all duration-200 ${
+            mobilePane === 'timeline' ? 'hidden md:flex md:w-[320px] lg:w-[420px]' : 
+            mobilePane === 'tasks' ? 'w-full md:w-[320px] lg:w-[420px]' : 
+            'w-[150px] sm:w-[260px] md:w-[320px] lg:w-[420px]'
+          }`}
+        >
           {/* Header */}
-          <div className="flex bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 py-2.5 shrink-0 h-10 items-center">
-            <div className="w-8 text-center shrink-0">Done</div>
-            <div className="flex-1 px-2">Task Details & Assignment</div>
-            <div className="w-20 text-right pr-2 shrink-0">Deadline</div>
-            <div className="w-12 text-center shrink-0">Action</div>
+          <div className="flex bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 sm:px-3 py-2.5 shrink-0 h-10 items-center">
+            <div className="w-6 sm:w-8 text-center shrink-0">Done</div>
+            <div className="flex-1 px-1 sm:px-2 truncate">Task Details</div>
+            <div className="hidden sm:block w-20 text-right pr-2 shrink-0">Deadline</div>
+            <div className="hidden sm:block w-12 text-center shrink-0">Action</div>
           </div>
 
           {/* List Content */}
-          <div ref={listScrollRef} className="overflow-y-auto flex-1 custom-scrollbar pb-24">
+          <div ref={listScrollRef} className="overflow-y-auto flex-1 custom-scrollbar pb-24 touch-pan-y">
             {visibleTasks.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm font-medium">
-                No WBS tasks found for the selected criteria.
+              <div className="p-6 text-center text-slate-400 text-xs font-medium">
+                No WBS tasks found.
               </div>
             ) : layout === 'officer' ? (
               // Officer Grouping
               groupedTasks.map((group) => (
                 <React.Fragment key={group.lead}>
                   {/* Group Header */}
-                  <div className="flex bg-slate-900 text-white h-10 items-center px-3.5 text-[10px] font-bold uppercase tracking-wider sticky top-0 z-30 shadow-xs">
-                    <UserCheck className="w-3.5 h-3.5 mr-2 text-blue-500" />
-                    Lead Officer: {group.lead}
+                  <div className="flex bg-slate-900 text-white h-10 items-center px-2.5 sm:px-3.5 text-[10px] font-bold uppercase tracking-wider sticky top-0 z-30 shadow-xs truncate">
+                    <UserCheck className="w-3.5 h-3.5 mr-1.5 text-blue-500 shrink-0" />
+                    <span className="truncate">Lead: {group.lead}</span>
                   </div>
 
                   {group.items.map((task, idx) => (
@@ -165,56 +246,76 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         </div>
 
         {/* ================= RIGHT PANE: Timeline Canvas ================= */}
-        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-50/50">
-          {/* Header Scale (Days or Months) */}
-          <div className="bg-slate-100 border-b border-slate-200 flex shrink-0 shadow-xs z-20 h-10 items-center relative">
-            {headerCells.map((cell, i) => (
-              <div
-                key={i}
-                style={{ width: `${cell.widthPct}%` }}
-                className="text-center py-2 text-[10px] font-bold text-slate-500 border-r border-slate-200 shrink-0 uppercase tracking-wider"
-              >
-                {cell.label}
-              </div>
-            ))}
-          </div>
-
-          {/* Timeline Scroll Area */}
-          <div ref={timelineScrollRef} className="flex-1 overflow-auto relative custom-scrollbar pb-24">
-            <div className="min-w-full min-h-full relative inline-block w-full">
-              {/* Background Grid Lines */}
-              <div className="absolute inset-0 pointer-events-none flex h-full">
+        <div 
+          className={`flex-1 flex flex-col relative overflow-hidden bg-slate-50/50 ${
+            mobilePane === 'tasks' ? 'hidden md:flex' : 'flex'
+          }`}
+        >
+          {/* Scrollable Timeline Container */}
+          <div className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden custom-scrollbar relative">
+            {/* Timeline Wrapper with min-width for mobile swiping */}
+            <div className="min-w-[640px] sm:min-w-full flex-1 flex flex-col relative">
+              {/* Header Scale (Days or Months) */}
+              <div className="bg-slate-100 border-b border-slate-200 flex shrink-0 shadow-xs z-20 h-10 items-center relative">
                 {headerCells.map((cell, i) => (
                   <div
                     key={i}
                     style={{ width: `${cell.widthPct}%` }}
-                    className="border-r border-slate-200/50 shrink-0 h-full"
-                  />
+                    className="text-center py-2 text-[10px] font-bold text-slate-500 border-r border-slate-200 shrink-0 uppercase tracking-wider"
+                  >
+                    {cell.label}
+                  </div>
                 ))}
               </div>
 
-              {/* Simulation Today Line */}
-              {showTodayLine && (
-                <div
-                  className="absolute top-0 bottom-0 w-[2px] bg-blue-600 z-30 leader-line pointer-events-none"
-                  style={{ left: `${todayLeftPct}%` }}
-                >
-                  <div className="sticky top-1 -translate-x-1/2 left-[1px] bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-sm whitespace-nowrap uppercase tracking-wider flex items-center gap-1 border border-blue-500">
-                    <Calendar className="w-3 h-3 text-white" />
-                    Sim Date: {formattedSimDate}
+              {/* Timeline Scroll Area */}
+              <div ref={timelineScrollRef} className="flex-1 overflow-y-auto relative custom-scrollbar pb-24 touch-pan-x touch-pan-y">
+                <div className="min-w-full min-h-full relative inline-block w-full">
+                  {/* Background Grid Lines */}
+                  <div className="absolute inset-0 pointer-events-none flex h-full">
+                    {headerCells.map((cell, i) => (
+                      <div
+                        key={i}
+                        style={{ width: `${cell.widthPct}%` }}
+                        className="border-r border-slate-200/50 shrink-0 h-full"
+                      />
+                    ))}
                   </div>
-                </div>
-              )}
 
-              {/* Gantt Bars List */}
-              <div className="pt-0 z-20 relative min-w-full">
-                {layout === 'officer' ? (
-                  groupedTasks.map((group) => (
-                    <React.Fragment key={`gantt-group-${group.lead}`}>
-                      {/* Empty spacer row for group header */}
-                      <div className="w-full bg-slate-200/50 h-10 border-y border-slate-300 relative" />
+                  {/* Simulation Today Line */}
+                  {showTodayLine && (
+                    <div
+                      className="absolute top-0 bottom-0 w-[2px] bg-blue-600 z-30 leader-line pointer-events-none"
+                      style={{ left: `${todayLeftPct}%` }}
+                    >
+                      <div className="sticky top-1 -translate-x-1/2 left-[1px] bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm whitespace-nowrap uppercase tracking-wider flex items-center gap-1 border border-blue-500">
+                        <Calendar className="w-3 h-3 text-white" />
+                        Sim: {formattedSimDate}
+                      </div>
+                    </div>
+                  )}
 
-                      {group.items.map((task) => (
+                  {/* Gantt Bars List */}
+                  <div className="pt-0 z-20 relative min-w-full">
+                    {layout === 'officer' ? (
+                      groupedTasks.map((group) => (
+                        <React.Fragment key={`gantt-group-${group.lead}`}>
+                          {/* Empty spacer row for group header */}
+                          <div className="w-full bg-slate-200/50 h-10 border-y border-slate-300 relative" />
+
+                          {group.items.map((task) => (
+                            <GanttBarItem
+                              key={`bar-${task.id}`}
+                              task={task}
+                              viewStartMs={viewStartMs}
+                              totalMs={totalMs}
+                              simMs={simMs}
+                            />
+                          ))}
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      visibleTasks.map((task) => (
                         <GanttBarItem
                           key={`bar-${task.id}`}
                           task={task}
@@ -222,20 +323,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                           totalMs={totalMs}
                           simMs={simMs}
                         />
-                      ))}
-                    </React.Fragment>
-                  ))
-                ) : (
-                  visibleTasks.map((task) => (
-                    <GanttBarItem
-                      key={`bar-${task.id}`}
-                      task={task}
-                      viewStartMs={viewStartMs}
-                      totalMs={totalMs}
-                      simMs={simMs}
-                    />
-                  ))
-                )}
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -308,7 +399,7 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
       </div>
 
       {/* Deadline */}
-      <div className="w-20 shrink-0 px-1 text-right text-[11px] font-bold mono">
+      <div className="hidden sm:block w-20 shrink-0 px-1 text-right text-[11px] font-bold mono">
         <span className={isCompleted ? 'text-emerald-600' : isOverdue ? 'text-red-600' : 'text-slate-600'}>
           {displayDl}
         </span>
@@ -320,7 +411,7 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="w-12 shrink-0 flex items-center justify-center gap-1 opacity-80 group-hover:opacity-100">
+      <div className="hidden sm:flex w-12 shrink-0 items-center justify-center gap-1 opacity-80 group-hover:opacity-100">
         <button
           onClick={() => onEdit(task)}
           className="p-1 hover:bg-slate-200 rounded text-slate-600 hover:text-slate-900 transition-colors"
@@ -380,7 +471,7 @@ const GanttBarItem: React.FC<GanttBarItemProps> = ({
   }
 
   return (
-    <div className="relative w-full h-[85px] border-b border-transparent gantt-row group">
+    <div className="relative w-full h-[85px] border-b border-slate-100 gantt-row group">
       {widthPct > 0 && leftPct < 100 && (
         <div
           className={`absolute top-4 bottom-4 rounded-md shadow-xs overflow-hidden flex items-center px-2.5 gantt-bar-wrapper cursor-pointer ${barBg}`}
