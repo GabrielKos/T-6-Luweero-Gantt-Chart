@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write for all users (team members/shared link collaboration)
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

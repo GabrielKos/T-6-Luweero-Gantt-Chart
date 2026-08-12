@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "tasks": {
+      "title": "WBS Tasks",
+      "description": "Tasks for KMC T-6 Battery Plant Master Workplan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "wp": { "type": "string" },
+        "activity": { "type": "string" },
+        "lead": { "type": "string" },
+        "support": { "type": "string" },
+        "deadline": { "type": "string" },
+        "startMs": { "type": "number" },
+        "endMs": { "type": "number" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "priority": { "type": "string" },
+        "updatedBy": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "wp", "activity", "lead", "deadline", "status"]
+    },
+    "activity_logs": {
+      "title": "Activity Audit Logs",
+      "description": "Track task updates across the team",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "taskId": { "type": "string" },
+        "taskTitle": { "type": "string" },
+        "action": { "type": "string" },
+        "user": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["taskId", "action", "timestamp"]
+    }
+  }
+}

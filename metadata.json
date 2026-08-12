@@ -1,0 +1,6 @@
+{
+  "name": "KMC T-6 Battery Plant WBS - Master Workplan",
+  "description": "Dynamic, real-time Gantt chart and work breakdown structure application with user authentication, task editing, and team collaboration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

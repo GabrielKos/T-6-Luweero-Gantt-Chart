@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+  border: 2px solid #F1F5F9;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Gantt bar hover */
+.gantt-bar-wrapper {
+  transition: all 0.2s ease-in-out;
+}
+.gantt-bar-wrapper:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 50;
+}
+
+.gantt-row {
+  transition: background-color 0.15s ease;
+}
+.gantt-row:hover {
+  background-color: #F8FAFC !important;
+}
+
+/* Overdue pulse */
+@keyframes pulse-rose {
+  0%, 100% { background-color: rgba(255, 241, 242, 0.9); }
+  50% { background-color: rgba(254, 205, 211, 0.8); }
+}
+.overdue-row {
+  animation: pulse-rose 2s infinite ease-in-out;
+}
+
+.leader-line {
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    overflow: visible !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  main {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  #task-list-container, #timeline-scroll-area {
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
