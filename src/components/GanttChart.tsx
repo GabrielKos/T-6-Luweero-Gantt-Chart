@@ -8,6 +8,7 @@ import {
   UserCheck, 
   Info,
   Calendar,
+  Clock,
   Layers,
   Columns,
   List,
@@ -42,7 +43,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const viewStartMs = new Date(`${currentView.start}T00:00:00`).getTime();
   const viewEndMs = new Date(`${currentView.end}T23:59:59`).getTime();
   const totalMs = viewEndMs - viewStartMs;
-  const simMs = new Date(`${simulationDate}T00:00:00`).getTime();
+  const simMs = new Date(`${simulationDate}T12:00:00`).getTime();
 
   // Filter tasks within date window if specific month selected
   let visibleTasks = tasks;
@@ -273,8 +274,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     style={{ left: `${todayLeftPct}%` }}
                   >
                     <div className="sticky top-11 -translate-x-1/2 left-[1px] bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm whitespace-nowrap uppercase tracking-wider flex items-center gap-1 border border-blue-500">
-                      <Calendar className="w-3 h-3 text-white" />
-                      Sim: {formattedSimDate}
+                      <Clock className="w-3 h-3 text-white animate-pulse" />
+                      EAT: {formattedSimDate}
                     </div>
                   </div>
                 )}

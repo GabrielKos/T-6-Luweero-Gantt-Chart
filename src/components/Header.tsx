@@ -15,7 +15,9 @@ interface HeaderProps {
   user: UserProfile | null;
   tasks: WBSTask[];
   simulationDate: string;
+  isLiveEAT: boolean;
   onSimulationDateChange: (date: string) => void;
+  onResetToLiveEAT: () => void;
   onOpenAuthModal: () => void;
   onOpenActivityLogs: () => void;
   syncStatus: 'synced' | 'syncing' | 'offline';
@@ -25,7 +27,9 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   tasks,
   simulationDate,
+  isLiveEAT,
   onSimulationDateChange,
+  onResetToLiveEAT,
   onOpenAuthModal,
   onOpenActivityLogs,
   syncStatus
@@ -60,18 +64,35 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Status Badges & Auth */}
         <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center w-full lg:w-auto">
           {/* Simulation Date Picker */}
-          <div className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 flex items-center gap-2.5 text-slate-800">
-            <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+          <div className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 flex items-center gap-2.5 text-slate-800 shadow-xs">
+            <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
             <div>
-              <div className="text-[9px] uppercase tracking-wider text-slate-500 font-bold leading-none mb-0.5">Simulation Date</div>
-              <input 
-                type="date" 
-                value={simulationDate} 
-                min="2026-07-01" 
-                max="2027-06-30" 
-                onChange={(e) => onSimulationDateChange(e.target.value)}
-                className="bg-transparent text-xs font-bold text-slate-900 focus:outline-none mono w-28 p-0 cursor-pointer"
-              />
+              <div className="text-[9px] uppercase tracking-wider text-slate-500 font-bold leading-none mb-0.5 flex items-center justify-between gap-1.5">
+                <span>Simulation Date</span>
+                <span className="text-[8px] bg-blue-100 text-blue-700 font-extrabold px-1 rounded flex items-center gap-0.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLiveEAT ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  EAT (UTC+3)
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input 
+                  type="date" 
+                  value={simulationDate} 
+                  min="2026-01-01" 
+                  max="2028-12-31" 
+                  onChange={(e) => onSimulationDateChange(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-900 focus:outline-none mono w-28 p-0 cursor-pointer"
+                />
+                {!isLiveEAT && (
+                  <button
+                    onClick={onResetToLiveEAT}
+                    className="text-[9px] bg-blue-600 hover:bg-blue-700 text-white font-bold px-1.5 py-0.5 rounded transition-colors shadow-2xs whitespace-nowrap"
+                    title="Sync to East Africa UTC+3 Live Clock"
+                  >
+                    Sync Live
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

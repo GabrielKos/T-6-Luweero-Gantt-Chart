@@ -14,6 +14,7 @@ import {
   deleteTask 
 } from './lib/firebase';
 import { TIME_VIEWS } from './components/TimeViewTabs';
+import { getEATDateString } from './lib/dateUtils';
 import { Header } from './components/Header';
 import { FilterBar } from './components/FilterBar';
 import { TimeViewTabs } from './components/TimeViewTabs';
@@ -28,9 +29,35 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('syncing');
 
-  // Interactive Simulation Date (defaulting to current mock date Aug 12, 2026)
-  const [simulationDate, setSimulationDate] = useState('2026-08-12');
+  // Interactive Simulation Date (synced live to East Africa Time UTC+3)
+  const [simulationDate, setSimulationDate] = useState(() => getEATDateString());
+  const [isLiveEAT, setIsLiveEAT] = useState(true);
   const [currentViewId, setCurrentViewId] = useState('overall');
+
+  // Continuously sync with East Africa Time (UTC+3) World Clock
+  useEffect(() => {
+    const syncEATClock = () => {
+      if (isLiveEAT) {
+        setSimulationDate(getEATDateString());
+      }
+    };
+
+    syncEATClock();
+    const interval = setInterval(syncEATClock, 30000); // 30-second interval check
+    return () => clearInterval(interval);
+  }, [isLiveEAT]);
+
+  const handleSimulationDateChange = (date: string) => {
+    setSimulationDate(date);
+    const liveDate = getEATDateString();
+    setIsLiveEAT(date === liveDate);
+  };
+
+  const handleResetToLiveEAT = () => {
+    const liveDate = getEATDateString();
+    setSimulationDate(liveDate);
+    setIsLiveEAT(true);
+  };
 
   // Filter State
   const [filters, setFilters] = useState<FilterState>({
@@ -213,7 +240,9 @@ export default function App() {
         user={user}
         tasks={tasks}
         simulationDate={simulationDate}
-        onSimulationDateChange={setSimulationDate}
+        isLiveEAT={isLiveEAT}
+        onSimulationDateChange={handleSimulationDateChange}
+        onResetToLiveEAT={handleResetToLiveEAT}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenActivityLogs={() => setIsLogsDrawerOpen(true)}
         syncStatus={syncStatus}
