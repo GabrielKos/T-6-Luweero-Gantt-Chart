@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserProfile, WBSTask } from '../types';
-import { KmcLogo } from './KmcLogo';
+import { RadiLogo } from './RadiLogo';
 import { 
   Database, 
   Calendar, 
@@ -46,17 +46,14 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Branding & Status Bar */}
       <div className="px-4 sm:px-8 py-3.5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-4 sm:gap-5">
-          {/* KMC Approved Logo Badge */}
-          <div className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-xs flex items-center justify-center h-11 min-w-[110px]">
-            <KmcLogo className="h-7" />
+          {/* Radi Energy Solutions Approved Logo Badge */}
+          <div className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-xs flex items-center justify-center h-12 min-w-[120px]">
+            <RadiLogo className="h-8" />
           </div>
           
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">T-6 Luwero Park</span>
-            </div>
-            <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 leading-none">
-              Battery Pack Plant Master Workplan
+            <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 leading-tight">
+              Radi Energy Solutions Battery Pack Plant Master WorkPlan
             </h1>
           </div>
         </div>
@@ -126,14 +123,14 @@ export const Header: React.FC<HeaderProps> = ({
             title="Manage Team Profile / Sign In"
           >
             <div className="w-6 h-6 rounded-md bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center uppercase">
-              {user?.displayName ? user.displayName.substring(0, 2) : 'KM'}
+              {user?.displayName ? user.displayName.substring(0, 2) : 'RE'}
             </div>
             <div className="text-left hidden sm:block">
               <div className="text-[11px] font-semibold text-slate-100 leading-none truncate max-w-[110px]">
                 {user?.displayName || 'Team Member'}
               </div>
               <div className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
-                {user?.role || 'KMC Engineer'}
+                {user?.role || 'Radi Engineer'}
               </div>
             </div>
             <UserCheck className="w-3.5 h-3.5 text-slate-400 ml-1" />

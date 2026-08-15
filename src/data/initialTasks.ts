@@ -128,16 +128,16 @@ export function generateSeedTasks(): WBSTask[] {
 }
 
 export const TEAM_MEMBERS = [
-  { name: "Shibah", role: "Lead Engineer / Project Lead", email: "shibah@kiiramotors.com" },
-  { name: "Morgan", role: "Business & Financial Strategy Lead", email: "morgan@kiiramotors.com" },
-  { name: "Owen", role: "HSE & ESG Officer", email: "owen@kiiramotors.com" },
-  { name: "Donald", role: "Legal & Corporate Formation Lead", email: "donald@kiiramotors.com" },
-  { name: "Gabriel", role: "Digital Architecture & Tech Officer", email: "gabriel@kiiramotors.com" },
-  { name: "Elizabeth", role: "Financial Modeling Officer", email: "elizabeth@kiiramotors.com" },
-  { name: "Druscilar", role: "Market Research Specialist", email: "druscilar@kiiramotors.com" },
-  { name: "Malik", role: "Geopolitical & Sourcing Specialist", email: "malik@kiiramotors.com" },
-  { name: "Karen", role: "Competitive Intelligence Officer", email: "karen@kiiramotors.com" },
-  { name: "Mukama", role: "Technical Analyst", email: "mukama@kiiramotors.com" },
-  { name: "Renorah", role: "Plant Layout Specialist", email: "renorah@kiiramotors.com" },
-  { name: "Rodney", role: "Process Flow Engineer", email: "rodney@kiiramotors.com" }
+  { name: "Shibah", role: "Lead Engineer / Project Lead", email: "shibah@radienergy.com" },
+  { name: "Morgan", role: "Business & Financial Strategy Lead", email: "morgan@radienergy.com" },
+  { name: "Owen", role: "HSE & ESG Officer", email: "owen@radienergy.com" },
+  { name: "Donald", role: "Legal & Corporate Formation Lead", email: "donald@radienergy.com" },
+  { name: "Gabriel", role: "Digital Architecture & Tech Officer", email: "gabriel@radienergy.com" },
+  { name: "Elizabeth", role: "Financial Modeling Officer", email: "elizabeth@radienergy.com" },
+  { name: "Druscilar", role: "Market Research Specialist", email: "druscilar@radienergy.com" },
+  { name: "Malik", role: "Geopolitical & Sourcing Specialist", email: "malik@radienergy.com" },
+  { name: "Karen", role: "Competitive Intelligence Officer", email: "karen@radienergy.com" },
+  { name: "Mukama", role: "Technical Analyst", email: "mukama@radienergy.com" },
+  { name: "Renorah", role: "Plant Layout Specialist", email: "renorah@radienergy.com" },
+  { name: "Rodney", role: "Process Flow Engineer", email: "rodney@radienergy.com" }
 ];

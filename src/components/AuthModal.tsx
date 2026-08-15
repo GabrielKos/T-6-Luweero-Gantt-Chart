@@ -50,7 +50,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (mode === 'signup') {
-        await signupWithEmail(email, password, displayName || 'KMC Member', role);
+        await signupWithEmail(email, password, displayName || 'Radi Member', role);
       } else {
         await loginWithEmail(email, password);
       }
@@ -98,7 +98,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               Team Access & Authentication
             </h3>
             <p className="text-xs text-slate-400 mt-0.5 font-medium">
-              KMC T-6 Master Workplan Multi-User Workspace
+              Radi Energy Solutions Multi-User Workspace
             </p>
           </div>
           <button
@@ -113,7 +113,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="bg-slate-100 p-4 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-blue-600 text-white font-bold text-sm flex items-center justify-center uppercase shadow-xs">
-              {currentUser?.displayName ? currentUser.displayName.substring(0, 2) : 'KM'}
+              {currentUser?.displayName ? currentUser.displayName.substring(0, 2) : 'RE'}
             </div>
             <div>
               <div className="text-xs font-bold text-slate-900">
