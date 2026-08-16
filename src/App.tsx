@@ -15,13 +15,16 @@ import {
 } from './lib/firebase';
 import { TIME_VIEWS } from './components/TimeViewTabs';
 import { getEATDateString } from './lib/dateUtils';
-import { Header } from './components/Header';
+import { Header, AppView } from './components/Header';
 import { FilterBar } from './components/FilterBar';
 import { TimeViewTabs } from './components/TimeViewTabs';
 import { GanttChart } from './components/GanttChart';
+import { OverallProgress } from './components/OverallProgress';
 import { TaskModal } from './components/TaskModal';
 import { AuthModal } from './components/AuthModal';
 import { ActivityLogDrawer } from './components/ActivityLogDrawer';
+import { generateSeedTasks } from './data/initialTasks';
+import { PLANT_BACKGROUND } from './assets/plantBackground';
 
 export default function App() {
   const [tasks, setTasks] = useState<WBSTask[]>([]);
@@ -33,6 +36,11 @@ export default function App() {
   const [simulationDate, setSimulationDate] = useState(() => getEATDateString());
   const [isLiveEAT, setIsLiveEAT] = useState(true);
   const [currentViewId, setCurrentViewId] = useState('overall');
+
+  // 'gantt' = the interactive workplan, 'progress' = the roll-up dashboard
+  const [activeView, setActiveView] = useState<AppView>('gantt');
+  // which export is running, so the buttons can show progress and stay disabled
+  const [isExporting, setIsExporting] = useState<string | null>(null);
 
   // Continuously sync with East Africa Time (UTC+3) World Clock
   useEffect(() => {
@@ -95,8 +103,12 @@ export default function App() {
         setSyncStatus('synced');
       },
       (err) => {
+        // Firestore unreachable (offline, blocked, or rules denied). Fall back to
+        // the baseline workplan so the chart, the progress page and the exports
+        // still work — the header dot turns red so nobody mistakes it for live data.
         console.error('Task sync error:', err);
         setSyncStatus('offline');
+        setTasks(prev => (prev.length ? prev : generateSeedTasks()));
       }
     );
 
@@ -229,18 +241,88 @@ export default function App() {
     }
   };
 
-  const handleExportPDF = () => {
-    window.print();
+  /**
+   * The set the exports work from: the interactive-control filters, narrowed
+   * again to the selected period so a month tab exports that month only —
+   * exactly what the Gantt shows on screen.
+   */
+  const exportTasks = useMemo(() => {
+    if (currentView.id === 'overall') return filteredTasks;
+    const startMs = new Date(`${currentView.start}T00:00:00`).getTime();
+    const endMs = new Date(`${currentView.end}T23:59:59`).getTime();
+    return filteredTasks.filter(t => t.startMs <= endMs && t.endMs >= startMs);
+  }, [filteredTasks, currentView]);
+
+  /** Human-readable description of what the exports were filtered by. */
+  const filterSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (filters.lead !== 'ALL') parts.push(`Lead ${filters.lead}`);
+    if (filters.support !== 'ALL') parts.push(`Support ${filters.support}`);
+    if (filters.package !== 'ALL') parts.push(filters.package);
+    if (filters.status !== 'ALL') parts.push(filters.status.replace('_', ' '));
+    if (filters.isCriticalOnly) parts.push('Critical only');
+    if (filters.searchQuery.trim()) parts.push(`"${filters.searchQuery.trim()}"`);
+    return parts;
+  }, [filters]);
+
+  const handleExportPDF = async () => {
+    if (isExporting) return;
+    setIsExporting('pdf');
+    try {
+      // Loaded on demand — jsPDF is ~1MB and most sessions never export.
+      const { exportActionMatrixPdf } = await import('./lib/exports');
+      await exportActionMatrixPdf({
+        tasks: exportTasks,
+        allTasks: tasks,
+        simulationDate,
+        view: currentView,
+        filterSummary
+      });
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Could not build the PDF. Please try again.');
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  const handleExportPNG = async () => {
+    if (isExporting) return;
+    setIsExporting('png');
+    try {
+      const { exportProgressPng } = await import('./lib/exports');
+      await exportProgressPng(tasks, simulationDate);
+    } catch (err) {
+      console.error('PNG export failed:', err);
+      alert('Could not build the snapshot image. Please try again.');
+    } finally {
+      setIsExporting(null);
+    }
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden antialiased bg-slate-50 font-sans text-slate-900">
+    <div className="h-screen flex flex-col overflow-hidden antialiased font-sans text-slate-900 relative">
+      {/* Plant render behind the whole app shell — sharp, not blurred. Header,
+          Filter Bar and Time Tabs are each translucent by a decreasing amount
+          top to bottom (see their own files), so the photo reads at full
+          strength right at the header and progressively fades out through
+          the chrome below it. It's fully hidden again by the time the Gantt
+          chart starts — GanttChart.tsx is untouched and keeps its own,
+          separately-tuned translucency exactly as it was. */}
+      <div
+        className="fixed inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: `url("${PLANT_BACKGROUND}")` }}
+        aria-hidden="true"
+      />
+
       {/* Header */}
       <Header
         user={user}
         tasks={tasks}
         simulationDate={simulationDate}
         isLiveEAT={isLiveEAT}
+        activeView={activeView}
+        onChangeView={setActiveView}
         onSimulationDateChange={handleSimulationDateChange}
         onResetToLiveEAT={handleResetToLiveEAT}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
@@ -248,37 +330,54 @@ export default function App() {
         syncStatus={syncStatus}
       />
 
-      {/* Filter Bar */}
-      <FilterBar
-        filters={filters}
-        onFilterChange={(updated) => setFilters(prev => ({ ...prev, ...updated }))}
-        leadOfficers={leadOfficers}
-        supportingMembers={supportingMembers}
-        workPackages={workPackages}
-        onAddNewTask={handleOpenCreateTask}
-        onExport={handleExportPDF}
-        onShareLink={handleShareLink}
-        isCopied={isCopied}
-      />
+      {activeView === 'gantt' ? (
+        <>
+          {/* Filter Bar */}
+          <FilterBar
+            filters={filters}
+            onFilterChange={(updated) => setFilters(prev => ({ ...prev, ...updated }))}
+            leadOfficers={leadOfficers}
+            supportingMembers={supportingMembers}
+            workPackages={workPackages}
+            onAddNewTask={handleOpenCreateTask}
+            onExport={handleExportPDF}
+            onExportPng={handleExportPNG}
+            onShareLink={handleShareLink}
+            isCopied={isCopied}
+            isExporting={isExporting}
+            exportCount={exportTasks.length}
+          />
 
-      {/* Time View Tabs */}
-      <TimeViewTabs
-        currentViewId={currentViewId}
-        onSelectView={setCurrentViewId}
-      />
+          {/* Time View Tabs */}
+          <TimeViewTabs
+            currentViewId={currentViewId}
+            onSelectView={setCurrentViewId}
+          />
 
-      {/* Main Gantt Body */}
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-white relative">
-        <GanttChart
-          tasks={filteredTasks}
-          currentView={currentView}
-          simulationDate={simulationDate}
-          layout={filters.layout}
-          onToggleTaskStatus={handleToggleTaskStatus}
-          onEditTask={handleOpenEditTask}
-          onDeleteTask={handleDeleteTask}
-        />
-      </main>
+          {/* Main Gantt Body */}
+          <main className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+            <GanttChart
+              tasks={filteredTasks}
+              currentView={currentView}
+              simulationDate={simulationDate}
+              layout={filters.layout}
+              onToggleTaskStatus={handleToggleTaskStatus}
+              onEditTask={handleOpenEditTask}
+              onDeleteTask={handleDeleteTask}
+            />
+          </main>
+        </>
+      ) : (
+        <main className="flex-1 min-h-0 flex flex-col relative">
+          <OverallProgress
+            tasks={tasks}
+            simulationDate={simulationDate}
+            onExportPng={handleExportPNG}
+            onExportPdf={handleExportPDF}
+            isExporting={isExporting}
+          />
+        </main>
+      )}
 
       {/* Modals & Drawers */}
       <TaskModal

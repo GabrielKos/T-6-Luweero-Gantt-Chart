@@ -25,7 +25,7 @@ interface TimeViewTabsProps {
 
 export const TimeViewTabs: React.FC<TimeViewTabsProps> = ({ currentViewId, onSelectView }) => {
   return (
-    <div className="px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto bg-slate-800 border-y border-slate-700/80 shrink-0 dark-scrollbar shadow-inner">
+    <div className="px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto bg-slate-800/95 border-y border-slate-700/80 shrink-0 dark-scrollbar shadow-inner">
       {TIME_VIEWS.map((view) => {
         const isActive = view.id === currentViewId;
         const isOverall = view.id === "overall";

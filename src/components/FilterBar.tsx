@@ -6,13 +6,15 @@ import {
   UserCheck, 
   Users,
   Plus, 
-  Share2, 
-  Download, 
-  Search, 
+  Share2,
+  FileDown,
+  ImageDown,
+  Search,
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 
 interface FilterBarProps {
@@ -23,8 +25,13 @@ interface FilterBarProps {
   workPackages: string[];
   onAddNewTask: () => void;
   onExport: () => void;
+  onExportPng: () => void;
   onShareLink: () => void;
   isCopied: boolean;
+  /** Which export is currently running ('pdf' | 'png' | null). */
+  isExporting?: string | null;
+  /** How many activities the PDF will contain, given the active filters. */
+  exportCount?: number;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -35,8 +42,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   workPackages,
   onAddNewTask,
   onExport,
+  onExportPng,
   onShareLink,
-  isCopied
+  isCopied,
+  isExporting = null,
+  exportCount = 0
 }) => {
   // Collapsible state: compact by default on small screens (<768px)
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
@@ -46,7 +56,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const isFiltered = filters.searchQuery || filters.lead !== 'ALL' || filters.support !== 'ALL' || filters.package !== 'ALL' || filters.isCriticalOnly;
 
   return (
-    <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-slate-900 via-slate-900 to-blue-950 border border-slate-800 m-1.5 sm:m-3 rounded-xl shadow-md relative text-white shrink-0">
+    <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-slate-900/85 via-slate-900/85 to-blue-950/85 border border-slate-800 m-1.5 sm:m-3 rounded-xl shadow-md relative text-white shrink-0">
       {/* Ambient highlight */}
       <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -99,14 +109,35 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <span className="hidden sm:inline">{isCopied ? 'Copied' : 'Share'}</span>
           </button>
 
-          {/* Export PDF Button */}
+          {/* Progress Snapshot (PNG) */}
+          <button
+            onClick={onExportPng}
+            disabled={!!isExporting}
+            className="px-2.5 sm:px-3 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-slate-100 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-slate-700"
+            title="Download a PNG of overall progress, days to SOP and each work package"
+          >
+            {isExporting === 'png'
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+              : <ImageDown className="w-3.5 h-3.5 text-blue-400" />}
+            <span className="hidden sm:inline">Snapshot</span>
+          </button>
+
+          {/* Action Matrix (PDF) — respects the active filters and period */}
           <button
             onClick={onExport}
-            className="px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-blue-500"
-            title="Export PDF / Print"
+            disabled={!!isExporting}
+            className="px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-blue-500"
+            title={`Export the ${exportCount} filtered activities as a landscape PDF with a compressed Gantt`}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Export</span>
+            {isExporting === 'pdf'
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <FileDown className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">Export PDF</span>
+            {exportCount > 0 && (
+              <span className="hidden md:inline text-[10px] bg-blue-800/70 rounded px-1 ml-0.5 mono">
+                {exportCount}
+              </span>
+            )}
           </button>
         </div>
       </div>

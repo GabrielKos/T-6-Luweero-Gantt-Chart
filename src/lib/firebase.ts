@@ -240,8 +240,8 @@ export function listenToAuth(onUserChange: (user: UserProfile | null) => void) {
       });
     } else {
       // Attempt auto anonymous login for instant experience; if disabled/restricted on console, fallback to local team member profile
-      const storedName = localStorage.getItem('kmc_user_display_name') || 'KMC Engineer';
-      const storedRole = localStorage.getItem('kmc_user_role') || 'Team Engineer';
+      const storedName = localStorage.getItem('kmc_user_display_name') || 'Team Member';
+      const storedRole = localStorage.getItem('kmc_user_role') || 'Team';
       try {
         const cred = await signInAnonymously(auth);
         onUserChange({

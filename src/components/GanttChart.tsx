@@ -132,7 +132,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const formattedSimDate = new Date(simMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-white relative">
+    // No fill here — the left task list and right timeline canvas each set
+    // their own translucency below. Filling this outer wrapper too would
+    // stack on top of theirs and wash the plant photo back out almost
+    // completely, which is the opposite of what we want.
+    <div className="flex-1 overflow-hidden flex flex-col relative">
       {/* Mobile Screen Navigation Bar (< 768px) */}
       <div className="md:hidden bg-slate-900 text-slate-200 px-3 py-1.5 flex items-center justify-between border-b border-slate-800 shrink-0 z-30">
         <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
@@ -168,15 +172,15 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
         {/* ================= LEFT PANE: Task List ================= */}
-        <div 
-          className={`shrink-0 bg-white border-r border-slate-200 flex flex-col min-h-0 shadow-xs z-20 transition-all duration-200 ${
+        <div
+          className={`shrink-0 bg-white/93 backdrop-blur-sm border-r border-slate-200 flex flex-col min-h-0 shadow-xs z-20 transition-all duration-200 ${
             mobilePane === 'timeline' ? 'hidden md:flex md:w-[320px] lg:w-[420px]' : 
             mobilePane === 'tasks' ? 'w-full md:w-[320px] lg:w-[420px]' : 
             'w-[150px] sm:w-[260px] md:w-[320px] lg:w-[420px]'
           }`}
         >
           {/* Header */}
-          <div className="flex bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 sm:px-3 py-2.5 shrink-0 h-10 items-center">
+          <div className="flex bg-slate-100/93 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 sm:px-3 py-2.5 shrink-0 h-10 items-center">
             <div className="w-6 sm:w-8 text-center shrink-0">Done</div>
             <div className="flex-1 px-1 sm:px-2 truncate">Task Details</div>
             <div className="hidden sm:block w-20 text-right pr-2 shrink-0">Deadline</div>
@@ -194,7 +198,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               groupedTasks.map((group) => (
                 <React.Fragment key={group.lead}>
                   {/* Group Header */}
-                  <div className="flex bg-slate-900 text-white h-10 items-center px-2.5 sm:px-3.5 text-[10px] font-bold uppercase tracking-wider sticky top-0 z-30 shadow-xs truncate">
+                  <div className="flex bg-slate-900/92 backdrop-blur-sm text-white h-10 items-center px-2.5 sm:px-3.5 text-[10px] font-bold uppercase tracking-wider sticky top-0 z-30 shadow-xs truncate">
                     <UserCheck className="w-3.5 h-3.5 mr-1.5 text-blue-500 shrink-0" />
                     <span className="truncate">Lead: {group.lead}</span>
                   </div>
@@ -230,8 +234,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         </div>
 
         {/* ================= RIGHT PANE: Timeline Canvas ================= */}
-        <div 
-          className={`flex-1 flex flex-col min-h-0 relative overflow-hidden bg-slate-50/50 ${
+        <div
+          className={`flex-1 flex flex-col min-h-0 relative overflow-hidden bg-white/90 backdrop-blur-sm ${
             mobilePane === 'tasks' ? 'hidden md:flex' : 'flex'
           }`}
         >
@@ -242,7 +246,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           >
             <div className="min-w-[700px] sm:min-w-[1000px] relative min-h-full flex flex-col">
               {/* Header Scale (Days or Months) - Sticky Top */}
-              <div className="sticky top-0 z-30 bg-slate-100 border-b border-slate-200 flex shrink-0 shadow-xs h-10 items-center">
+              <div className="sticky top-0 z-30 bg-slate-100/93 backdrop-blur-sm border-b border-slate-200 flex shrink-0 shadow-xs h-10 items-center">
                 {headerCells.map((cell, i) => (
                   <div
                     key={i}
@@ -262,7 +266,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     <div
                       key={i}
                       style={{ width: `${cell.widthPct}%` }}
-                      className="border-r border-slate-200/50 shrink-0 h-full"
+                      className="border-r border-slate-300/70 shrink-0 h-full"
                     />
                   ))}
                 </div>
@@ -286,7 +290,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     groupedTasks.map((group) => (
                       <React.Fragment key={`gantt-group-${group.lead}`}>
                         {/* Empty spacer row for group header */}
-                        <div className="w-full bg-slate-200/50 h-10 border-y border-slate-300 relative" />
+                        <div className="w-full bg-slate-200/88 h-10 border-y border-slate-300 relative" />
 
                         {group.items.map((task) => (
                           <GanttBarItem
@@ -342,8 +346,8 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
   const isOverdue = !isCompleted && task.endMs < simMs;
   const isOdd = idx % 2 !== 0;
 
-  let rowBg = isOdd ? 'bg-slate-50/50' : 'bg-white';
-  if (isOverdue) rowBg = 'overdue-row bg-red-50';
+  let rowBg = isOdd ? 'bg-slate-50/92' : 'bg-white/93';
+  if (isOverdue) rowBg = 'overdue-row bg-red-50/93';
 
   const dateSplit = task.deadline.split('-');
   const displayDl = `${dateSplit[2]}.${dateSplit[1]}.${dateSplit[0]}`;
@@ -382,13 +386,22 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
         </div>
       </div>
 
-      {/* Deadline */}
+      {/* Deadline — small themed pill behind the date/status so it stays
+          legible against the photo showing through the row background. */}
       <div className="hidden sm:block w-20 shrink-0 px-1 text-right text-[11px] font-bold mono">
-        <span className={isCompleted ? 'text-emerald-600' : isOverdue ? 'text-red-600' : 'text-slate-600'}>
+        <span
+          className={`inline-block px-1.5 py-0.5 rounded ${
+            isCompleted
+              ? 'bg-emerald-50/90 text-emerald-600'
+              : isOverdue
+                ? 'bg-red-50/90 text-red-600'
+                : 'bg-slate-100/90 text-slate-600'
+          }`}
+        >
           {displayDl}
         </span>
         {isOverdue && (
-          <div className="text-[8px] text-red-600 font-black uppercase tracking-wider mt-0.5 animate-pulse">
+          <div className="text-[8px] text-red-600 font-black uppercase tracking-wider mt-0.5 animate-pulse bg-red-50/90 rounded px-1 inline-block">
             Overdue
           </div>
         )}
