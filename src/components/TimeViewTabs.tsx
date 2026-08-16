@@ -18,6 +18,21 @@ export const TIME_VIEWS: ViewOption[] = [
   { id: "jun", name: "June 2027", start: "2027-06-01", end: "2027-06-30", type: "days" }
 ];
 
+/**
+ * Maps any YYYY-MM-DD date string to the corresponding active month view tab ID
+ * so the initial landing page immediately opens to the active month with the blue day indicator.
+ */
+export const getViewIdForDate = (dateStr: string): string => {
+  if (!dateStr) return 'aug';
+  const matchingMonth = TIME_VIEWS.find(
+    (v) => v.type === 'days' && dateStr >= v.start && dateStr <= v.end
+  );
+  if (matchingMonth) return matchingMonth.id;
+  if (dateStr < TIME_VIEWS[1].start) return TIME_VIEWS[1].id;
+  if (dateStr > TIME_VIEWS[TIME_VIEWS.length - 1].end) return TIME_VIEWS[TIME_VIEWS.length - 1].id;
+  return 'aug';
+};
+
 interface TimeViewTabsProps {
   currentViewId: string;
   onSelectView: (viewId: string) => void;

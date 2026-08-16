@@ -13,11 +13,10 @@ import {
   saveTask, 
   deleteTask 
 } from './lib/firebase';
-import { TIME_VIEWS } from './components/TimeViewTabs';
+import { TIME_VIEWS, TimeViewTabs, getViewIdForDate } from './components/TimeViewTabs';
 import { getEATDateString } from './lib/dateUtils';
 import { Header, AppView } from './components/Header';
 import { FilterBar } from './components/FilterBar';
-import { TimeViewTabs } from './components/TimeViewTabs';
 import { GanttChart } from './components/GanttChart';
 import { OverallProgress } from './components/OverallProgress';
 import { TaskModal } from './components/TaskModal';
@@ -35,7 +34,9 @@ export default function App() {
   // Interactive Simulation Date (synced live to East Africa Time UTC+3)
   const [simulationDate, setSimulationDate] = useState(() => getEATDateString());
   const [isLiveEAT, setIsLiveEAT] = useState(true);
-  const [currentViewId, setCurrentViewId] = useState('overall');
+  
+  // Landing month tab dynamically defaults to the active month with the blue indicator line
+  const [currentViewId, setCurrentViewId] = useState(() => getViewIdForDate(getEATDateString()));
 
   // 'gantt' = the interactive workplan, 'progress' = the roll-up dashboard
   const [activeView, setActiveView] = useState<AppView>('gantt');
@@ -46,7 +47,8 @@ export default function App() {
   useEffect(() => {
     const syncEATClock = () => {
       if (isLiveEAT) {
-        setSimulationDate(getEATDateString());
+        const liveDate = getEATDateString();
+        setSimulationDate(liveDate);
       }
     };
 
@@ -59,12 +61,18 @@ export default function App() {
     setSimulationDate(date);
     const liveDate = getEATDateString();
     setIsLiveEAT(date === liveDate);
+    // Switch to corresponding month view so the blue day line is immediately visible
+    const targetMonthId = getViewIdForDate(date);
+    if (targetMonthId) {
+      setCurrentViewId(targetMonthId);
+    }
   };
 
   const handleResetToLiveEAT = () => {
     const liveDate = getEATDateString();
     setSimulationDate(liveDate);
     setIsLiveEAT(true);
+    setCurrentViewId(getViewIdForDate(liveDate));
   };
 
   // Filter State
