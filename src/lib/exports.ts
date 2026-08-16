@@ -239,7 +239,7 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
   ctx.fillText('Battery Pack Plant — Overall Progress', titleX, margin + 20);
   ctx.fillStyle = 'rgba(255,255,255,.68)';
   ctx.font = '400 12.5px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText('T-6 Luweero Battery Pack Plant · Master WorkPlan FY26/27', titleX, margin + 40);
+  ctx.fillText('Radi Energy Solutions Battery Pack Plant · Master WorkPlan FY26/27', titleX, margin + 40);
 
   ctx.save();
   ctx.textAlign = 'right';
@@ -374,7 +374,7 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
   ctx.fillStyle = '#7c8697';
   ctx.font = '400 11.5px "Segoe UI",Roboto,Arial,sans-serif';
   ctx.fillText(
-    'Radi Energy Solutions · T-6 Luweero Battery Pack Plant · generated ' + todayStamp(),
+    'Radi Energy Solutions Battery Pack Plant · Master WorkPlan · generated ' + todayStamp(),
     margin, H - 22
   );
 
@@ -557,7 +557,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.6);
     doc.setTextColor(255, 255, 255);
-    doc.text('Radi Energy Solutions · T-6 Luweero · FY26/27', textX, headerH * 0.36 + 10);
+    doc.text('Radi Energy Solutions · Master WorkPlan · FY26/27', textX, headerH * 0.36 + 10);
     doc.restoreGraphicsState();
 
     let px = textX;
@@ -1030,7 +1030,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     doc.setFontSize(6.6);
     doc.setTextColor(100, 116, 139);
     doc.text(
-      `Radi Energy Solutions · T-6 Luweero Battery Pack Plant · page ${i} of ${total}`,
+      `Radi Energy Solutions Battery Pack Plant · Master WorkPlan · page ${i} of ${total}`,
       pageW / 2, pageH - 12, { align: 'center' }
     );
   }

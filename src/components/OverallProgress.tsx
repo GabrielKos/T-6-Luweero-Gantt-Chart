@@ -401,7 +401,7 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
         </div>
 
         <div className="text-center text-[10px] text-slate-500 mt-6">
-          Radi Energy Solutions · T-6 Luweero Battery Pack Plant · generated {formatDate(simulationDate)}
+          Radi Energy Solutions Battery Pack Plant · Master WorkPlan · generated {formatDate(simulationDate)}
         </div>
       </div>
       </div>
