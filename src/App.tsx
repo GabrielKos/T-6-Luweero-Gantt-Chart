@@ -214,31 +214,66 @@ export default function App() {
     return TIME_VIEWS.find(v => v.id === currentViewId) || TIME_VIEWS[0];
   }, [currentViewId]);
 
-  // Task Handlers
+  // Authentication Protection for Edits & Adjustments
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  const isUserAuthenticated = () => {
+    return !!(user?.displayName && user.displayName !== 'Guest Engineer' && user.displayName !== 'Team Member' && !user.isAnonymous);
+  };
+
+  const requireAuth = (action: () => void) => {
+    if (isUserAuthenticated()) {
+      action();
+    } else {
+      setPendingAction(() => action);
+      setIsAuthModalOpen(true);
+    }
+  };
+
+  const handleAuthenticated = (authenticatedUser: UserProfile) => {
+    setUser(authenticatedUser);
+    if (pendingAction) {
+      const actionToExecute = pendingAction;
+      setPendingAction(null);
+      setTimeout(() => {
+        actionToExecute();
+      }, 100);
+    }
+  };
+
+  // Task Handlers with Authentication Gates
   const handleToggleTaskStatus = async (taskId: string, currentStatus: WBSTask['status']) => {
-    const newStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
-    const activeUserName = user?.displayName || 'Team Member';
-    await updateTaskStatus(taskId, newStatus, activeUserName);
+    requireAuth(async () => {
+      const newStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+      const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
+      await updateTaskStatus(taskId, newStatus, activeUserName);
+    });
   };
 
   const handleOpenCreateTask = () => {
-    setEditingTask(null);
-    setIsTaskModalOpen(true);
+    requireAuth(() => {
+      setEditingTask(null);
+      setIsTaskModalOpen(true);
+    });
   };
 
   const handleOpenEditTask = (task: WBSTask) => {
-    setEditingTask(task);
-    setIsTaskModalOpen(true);
+    requireAuth(() => {
+      setEditingTask(task);
+      setIsTaskModalOpen(true);
+    });
   };
 
   const handleSaveTask = async (taskData: Partial<WBSTask> & { id?: string }) => {
-    const activeUserName = user?.displayName || 'Team Member';
+    const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
     await saveTask(taskData, activeUserName);
   };
 
   const handleDeleteTask = async (taskId: string, taskTitle: string) => {
-    const activeUserName = user?.displayName || 'Team Member';
-    await deleteTask(taskId, taskTitle, activeUserName);
+    requireAuth(async () => {
+      const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
+      await deleteTask(taskId, taskTitle, activeUserName);
+    });
   };
 
   const handleShareLink = () => {
@@ -396,7 +431,11 @@ export default function App() {
       <AuthModal
         isOpen={isAuthModalOpen}
         currentUser={user}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setPendingAction(null);
+        }}
+        onAuthenticated={handleAuthenticated}
       />
 
       <ActivityLogDrawer
