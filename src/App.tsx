@@ -302,15 +302,9 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden antialiased font-sans text-slate-900 relative">
-      {/* Plant render behind the whole app shell — sharp, not blurred. Header,
-          Filter Bar and Time Tabs are each translucent by a decreasing amount
-          top to bottom (see their own files), so the photo reads at full
-          strength right at the header and progressively fades out through
-          the chrome below it. It's fully hidden again by the time the Gantt
-          chart starts — GanttChart.tsx is untouched and keeps its own,
-          separately-tuned translucency exactly as it was. */}
+      {/* Plant render behind the whole app shell */}
       <div
-        className="fixed inset-0 -z-10 bg-cover bg-center"
+        className="absolute inset-0 z-0 bg-cover bg-center"
         style={{ backgroundImage: `url("${PLANT_BACKGROUND}")` }}
         aria-hidden="true"
       />
@@ -348,10 +342,13 @@ export default function App() {
             exportCount={exportTasks.length}
           />
 
-          {/* Time View Tabs */}
+          {/* Time View Tabs & Work Package Ribbon */}
           <TimeViewTabs
             currentViewId={currentViewId}
             onSelectView={setCurrentViewId}
+            selectedPackage={filters.package}
+            workPackages={workPackages}
+            onSelectPackage={(pkg) => setFilters(prev => ({ ...prev, package: pkg }))}
           />
 
           {/* Main Gantt Body */}
