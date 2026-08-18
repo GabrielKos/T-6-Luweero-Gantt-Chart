@@ -7,8 +7,8 @@ import { WBSTask } from '../types';
  * number in the PNG and the number in the PDF can never drift apart.
  */
 
-/** Start of Production target for the T-6 Luweero battery pack plant. */
-export const SOP_TARGET = '2027-06-30';
+/** Commissioning of Plant (COP) target for the T-6 Luweero battery plant (December 2030). */
+export const COP_TARGET = '2030-12-31';
 
 /** Programme window (matches the "Overall FY26/27" time view). */
 export const PROGRAMME_START = '2026-07-01';
@@ -220,7 +220,7 @@ export function monthlyLoad(tasks: WBSTask[], simMs: number) {
 export interface ProgressSummary {
   counts: StatusCounts;
   pct: number;
-  daysToSop: number;
+  daysToCop: number;
   elapsedPct: number;
   packages: PackageStat[];
   officers: OfficerStat[];
@@ -237,7 +237,7 @@ export function buildSummary(tasks: WBSTask[], simulationDate: string): Progress
   return {
     counts,
     pct: counts.total ? Math.round((counts.completed / counts.total) * 100) : 0,
-    daysToSop: daysBetween(simulationDate, SOP_TARGET),
+    daysToCop: daysBetween(simulationDate, COP_TARGET),
     elapsedPct: Math.max(0, Math.min(100, Math.round((elapsed / totalSpan) * 100))),
     packages: packageStats(tasks, simMs),
     officers: officerStats(tasks, simMs),

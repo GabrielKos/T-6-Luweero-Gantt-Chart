@@ -4,7 +4,7 @@ import { PLANT_BACKGROUND } from '../assets/plantBackground';
 import {
   buildSummary,
   formatDate,
-  SOP_TARGET,
+  COP_TARGET,
   PROGRAMME_START,
   PROGRAMME_END,
   PALETTE
@@ -87,7 +87,7 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
               Programme Status
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight drop-shadow-sm">
-              Battery Pack Plant — Overall Progress
+              Battery Plant — Overall Progress
             </h2>
             <div className="text-[11.5px] text-slate-300 mt-1">
               {formatDate(PROGRAMME_START)} – {formatDate(PROGRAMME_END)} · as at {formatDate(simulationDate)} (EAT)
@@ -168,20 +168,20 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
             </div>
           </div>
 
-          {/* SOP countdown */}
+          {/* COP countdown */}
           <div className="rounded-2xl border border-white/20 bg-slate-900/85 backdrop-blur-md shadow-lg p-5 flex flex-col justify-center">
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-4 h-4 text-blue-400" />
               <span className="text-[10px] uppercase tracking-[0.14em] text-blue-300 font-bold">
-                Days to SOP
+                Days to COP
               </span>
             </div>
             <div className="text-[46px] leading-none font-bold text-white tracking-tight mono">
-              {s.daysToSop}
+              {s.daysToCop}
             </div>
             <div className="text-[11.5px] text-slate-400 mt-3 flex items-center gap-1.5">
               <CalendarClock className="w-3.5 h-3.5 shrink-0" />
-              Target {formatDate(SOP_TARGET)}
+              Commissioning {formatDate(COP_TARGET)}
             </div>
           </div>
         </div>
@@ -401,7 +401,7 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
         </div>
 
         <div className="text-center text-[10px] text-slate-500 mt-6">
-          Radi Energy Solutions Battery Pack Plant · Master WorkPlan · generated {formatDate(simulationDate)}
+          Radi Energy Solutions Battery Plant · Master WorkPlan · generated {formatDate(simulationDate)}
         </div>
       </div>
       </div>

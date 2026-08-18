@@ -131,6 +131,31 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const todayLeftPct = showTodayLine ? ((simMs - viewStartMs) / totalMs) * 100 : 0;
   const formattedSimDate = new Date(simMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+  // Auto-scroll timeline horizontally so the Blue Day-Leader line is immediately in view
+  useEffect(() => {
+    const timeEl = timelineScrollRef.current;
+    if (!timeEl) return;
+
+    const snapToLeaderLine = (smooth: boolean) => {
+      if (showTodayLine && timeEl) {
+        const totalScrollWidth = timeEl.scrollWidth;
+        const viewportWidth = timeEl.clientWidth;
+        if (totalScrollWidth > viewportWidth) {
+          const linePixelPos = (totalScrollWidth * todayLeftPct) / 100;
+          // Position day-leader line ~30% from the left edge so current and upcoming tasks are prominently visible
+          const targetScrollLeft = Math.max(0, linePixelPos - viewportWidth * 0.3);
+          timeEl.scrollTo({ left: targetScrollLeft, behavior: smooth ? 'smooth' : 'auto' });
+        }
+      }
+    };
+
+    // Initial snap + delayed pass to ensure container layout dimensions are settled
+    snapToLeaderLine(false);
+    const timer = setTimeout(() => snapToLeaderLine(true), 120);
+
+    return () => clearTimeout(timer);
+  }, [currentView.id, simulationDate, showTodayLine, todayLeftPct, mobilePane]);
+
   return (
     // No fill here — the left task list and right timeline canvas each set
     // their own translucency below. Filling this outer wrapper too would

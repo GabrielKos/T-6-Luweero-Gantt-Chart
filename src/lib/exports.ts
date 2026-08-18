@@ -10,7 +10,7 @@ import {
   formatDate,
   dayMs,
   wpHex,
-  SOP_TARGET,
+  COP_TARGET,
   PALETTE
 } from './projectStats';
 
@@ -236,10 +236,10 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
   }
   ctx.fillStyle = '#ffffff';
   ctx.font = '750 23px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText('Battery Pack Plant — Overall Progress', titleX, margin + 20);
+  ctx.fillText('Battery Plant — Overall Progress', titleX, margin + 20);
   ctx.fillStyle = 'rgba(255,255,255,.68)';
   ctx.font = '400 12.5px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText('Radi Energy Solutions Battery Pack Plant · Master WorkPlan FY26/27', titleX, margin + 40);
+  ctx.fillText('Radi Energy Solutions Battery Plant · Master WorkPlan FY26/27', titleX, margin + 40);
 
   ctx.save();
   ctx.textAlign = 'right';
@@ -250,10 +250,10 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
 
   let px = titleX;
   px += pill('Scope: FY26/27 Workplan', px, margin + 56, false) + 8;
-  px += pill('SOP Target: ' + formatDate(SOP_TARGET), px, margin + 56, true) + 8;
+  px += pill('COP Target: ' + formatDate(COP_TARGET), px, margin + 56, true) + 8;
   px += pill('As at: ' + formatDate(simulationDate), px, margin + 56, false) + 8;
 
-  /* ================= HERO: overall progress + days to SOP ================= */
+  /* ================= HERO: overall progress + days to COP ================= */
   const heroY = headerH + gap;
   const sopW = 268;
   const progW = W - margin * 2 - gap - sopW;
@@ -297,13 +297,13 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
   const sopX = margin + progW + gap + 26;
   ctx.fillStyle = PALETTE.blueLight;
   ctx.font = '700 11px "Segoe UI",Roboto,Arial,sans-serif';
-  spaced('DAYS TO SOP', sopX, heroY + 36, 1.2);
+  spaced('DAYS TO COP', sopX, heroY + 36, 1.2);
   ctx.fillStyle = '#ffffff';
   ctx.font = '750 46px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText(String(s.daysToSop), sopX, heroY + 88);
+  ctx.fillText(String(s.daysToCop), sopX, heroY + 88);
   ctx.fillStyle = 'rgba(226,232,240,.78)';
   ctx.font = '400 12.5px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText('Target ' + formatDate(SOP_TARGET), sopX, heroY + heroH - 26);
+  ctx.fillText('Commissioning ' + formatDate(COP_TARGET), sopX, heroY + heroH - 26);
 
   /* ================= KPI ROW ================= */
   const kpiY = heroY + heroH + gap;
@@ -374,7 +374,7 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
   ctx.fillStyle = '#7c8697';
   ctx.font = '400 11.5px "Segoe UI",Roboto,Arial,sans-serif';
   ctx.fillText(
-    'Radi Energy Solutions Battery Pack Plant · Master WorkPlan · generated ' + todayStamp(),
+    'Radi Energy Solutions Battery Plant · Master WorkPlan · generated ' + todayStamp(),
     margin, H - 22
   );
 
@@ -545,7 +545,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
 
     const titleMaxW = pageW - textX - margin - 190;
 
-    const title = 'Battery Pack Plant Master WorkPlan';
+    const title = 'Battery Plant Master WorkPlan';
     const ts = fitSize(title, titleMaxW, 13.5, 9, true);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -562,7 +562,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
 
     let px = textX;
     px += pill('Period: ' + view.name, px, headerH - 22, 6.6, [255, 255, 255], 0.14, [255, 255, 255], false) + 4;
-    px += pill('SOP: ' + formatDate(SOP_TARGET), px, headerH - 22, 6.6, blue, 0.95, [255, 255, 255], true) + 4;
+    px += pill('COP: ' + formatDate(COP_TARGET), px, headerH - 22, 6.6, blue, 0.95, [255, 255, 255], true) + 4;
     px += pill('As at: ' + formatDate(simulationDate), px, headerH - 22, 6.6, [255, 255, 255], 0.14, [255, 255, 255], false) + 4;
     if (filterSummary.length) {
       const f = clip('Filters: ' + filterSummary.join(' · '), pageW - px - margin - 170);
@@ -601,7 +601,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
   const counts = countStatuses(tasks, simMs);
   const outstanding = counts.total - counts.completed;
   const pct = counts.total ? Math.round((counts.completed / counts.total) * 100) : 0;
-  const daysToSop = Math.round((dayMs(SOP_TARGET) - simMs) / 86400000);
+  const daysToCop = Math.round((dayMs(COP_TARGET) - simMs) / 86400000);
 
   const stripY = headerH + 12;
   const stripH = 46;
@@ -611,7 +611,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     ['Overdue', String(counts.overdue), hexToRgb(PALETTE.rose)],
     ['In progress', String(counts.inProgress), hexToRgb(PALETTE.blue)],
     ['Pending', String(counts.pending), hexToRgb(PALETTE.slate)],
-    ['Days to SOP', String(daysToSop), ink]
+    ['Days to COP', String(daysToCop), ink]
   ];
   const cellW = (pageW - margin * 2 - 5 * 7) / 6;
   cells.forEach((c, i) => {
@@ -1030,7 +1030,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     doc.setFontSize(6.6);
     doc.setTextColor(100, 116, 139);
     doc.text(
-      `Radi Energy Solutions Battery Pack Plant · Master WorkPlan · page ${i} of ${total}`,
+      `Radi Energy Solutions Battery Plant · Master WorkPlan · page ${i} of ${total}`,
       pageW / 2, pageH - 12, { align: 'center' }
     );
   }

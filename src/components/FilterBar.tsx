@@ -114,7 +114,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onClick={onExportPng}
             disabled={!!isExporting}
             className="px-2.5 sm:px-3 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-slate-100 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-slate-700"
-            title="Download a PNG of overall progress, days to SOP and each work package"
+            title="Download a PNG of overall progress, days to COP and each work package"
           >
             {isExporting === 'png'
               ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />

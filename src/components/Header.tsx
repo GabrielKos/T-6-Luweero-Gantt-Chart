@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="hidden lg:block leading-tight min-w-0">
             <div className="text-[12.5px] font-bold tracking-tight text-white truncate max-w-[230px] xl:max-w-none">
-              Radi Energy Solutions Battery Pack Plant Master WorkPlan
+              Radi Energy Solutions Battery Plant Master WorkPlan
             </div>
             <div className="text-[9.5px] text-slate-400 font-medium tracking-wide truncate">
               Radi Energy Solutions · Master WorkPlan · FY26/27
