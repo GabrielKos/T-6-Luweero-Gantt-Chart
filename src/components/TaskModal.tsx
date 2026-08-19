@@ -109,7 +109,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {task ? 'Edit WBS Activity' : 'Create New WBS Task'}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5 font-medium">
-              KMC T-6 Battery Plant Master Workplan 2026–2027
+              Radi Energy Solutions Battery Plant Master Workplan 2026–2027
             </p>
           </div>
           <button

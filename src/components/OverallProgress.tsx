@@ -108,7 +108,7 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
               onClick={onExportPdf}
               disabled={!!isExporting}
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 border border-blue-400 text-white text-xs font-bold rounded-lg px-3 py-2 shadow-sm transition-colors"
-              title="Download the outstanding-activity matrix"
+              title="Download the complete Activity Matrix & Gantt PDF report"
             >
               <FileDown className="w-4 h-4" />
               {isExporting === 'pdf' ? 'Building…' : 'Action Matrix PDF'}

@@ -384,7 +384,7 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `T6_Overall_Progress_${todayStamp()}.png`;
+      a.download = `Radi_Energy_Solutions_Overall_Progress_${todayStamp()}.png`;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(url); a.remove(); resolve(); }, 100);
@@ -599,7 +599,6 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
 
   /* ---------- summary strip ---------- */
   const counts = countStatuses(tasks, simMs);
-  const outstanding = counts.total - counts.completed;
   const pct = counts.total ? Math.round((counts.completed / counts.total) * 100) : 0;
   const daysToCop = Math.round((dayMs(COP_TARGET) - simMs) / 86400000);
 
@@ -607,9 +606,9 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
   const stripH = 46;
   const cells: [string, string, [number, number, number]][] = [
     ['Overall progress', `${pct}%`, blue],
-    ['Outstanding', String(outstanding), [71, 85, 105]],
-    ['Overdue', String(counts.overdue), hexToRgb(PALETTE.rose)],
+    ['Completed', String(counts.completed), [16, 185, 129]],
     ['In progress', String(counts.inProgress), hexToRgb(PALETTE.blue)],
+    ['Overdue', String(counts.overdue), hexToRgb(PALETTE.rose)],
     ['Pending', String(counts.pending), hexToRgb(PALETTE.slate)],
     ['Days to COP', String(daysToCop), ink]
   ];
@@ -626,12 +625,15 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     doc.text(c[1], x + 10, stripY + 36);
   });
 
-  /* ---------- outstanding-activity tables ---------- */
+  /* ---------- activity tables (overdue, in-progress / planned, completed) ---------- */
   const overdue = tasks
     .filter(t => effectiveStatus(t, simMs) === 'OVERDUE')
     .sort((a, b) => a.endMs - b.endMs);
   const upcoming = tasks
     .filter(t => { const st = effectiveStatus(t, simMs); return st === 'IN_PROGRESS' || st === 'PENDING'; })
+    .sort((a, b) => a.endMs - b.endMs);
+  const completed = tasks
+    .filter(t => effectiveStatus(t, simMs) === 'COMPLETED')
     .sort((a, b) => a.endMs - b.endMs);
 
   function sectionHeading(label: string, count: number, y: number, accent: [number, number, number]): number {
@@ -657,7 +659,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     lead: 56,
     support: 112,
     dl: 60,
-    days: 46
+    days: 50
   };
   const used = Object.values(colW).reduce((a, b) => a + b, 0);
   colW.act += tableW - used - 16; // absorb the remainder so the table exactly fills the page
@@ -683,9 +685,20 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     autoTable(doc, {
       startY: ty,
       margin: { left: margin, right: margin, top: headerH + 14, bottom: margin },
-      head: [['#', 'Work Package', 'Activity', 'Lead', 'Supporting Team', 'Deadline', 'Days']],
+      head: [['#', 'Work Package', 'Activity', 'Lead', 'Supporting Team', 'Deadline', 'Status / Days']],
       body: rows.map((t, i) => {
         const d = Math.round((t.endMs - simMs) / 86400000);
+        const st = effectiveStatus(t, simMs);
+        let statusStr = '';
+        if (st === 'COMPLETED') {
+          statusStr = 'Done ✓';
+        } else if (d < 0) {
+          statusStr = `${-d} late`;
+        } else if (d === 0) {
+          statusStr = 'today';
+        } else {
+          statusStr = `${d}d left`;
+        }
         return [
           String(i + 1),
           t.wp,
@@ -693,7 +706,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
           t.lead || '—',
           t.support || 'None',
           formatDate(t.deadline),
-          d < 0 ? `${-d} late` : d === 0 ? 'today' : `${d}`
+          statusStr
         ];
       }),
       theme: 'grid',
@@ -725,20 +738,28 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
         5: { cellWidth: colW.dl, halign: 'center' },
         6: { cellWidth: colW.days, halign: 'center', fontStyle: 'bold' }
       },
-      // colour-code the work package cell and the urgency column
+      // colour-code the work package cell and the urgency/completion column
       didParseCell: (data: any) => {
         if (data.section !== 'body') return;
         const t = rows[data.row.index];
+        const st = effectiveStatus(t, simMs);
         if (data.column.index === 1) {
           const [r, g, b] = hexToRgb(wpHex(t.wp));
           data.cell.styles.textColor = [r, g, b];
           data.cell.styles.fontStyle = 'bold';
         }
+        if (data.column.index === 2 && st === 'COMPLETED') {
+          data.cell.styles.textColor = [71, 85, 105];
+        }
         if (data.column.index === 6) {
-          const d = Math.round((t.endMs - simMs) / 86400000);
-          data.cell.styles.textColor = d < 0
-            ? hexToRgb(PALETTE.rose)
-            : d <= 7 ? hexToRgb(PALETTE.amber) : [100, 116, 139];
+          if (st === 'COMPLETED') {
+            data.cell.styles.textColor = [16, 185, 129];
+          } else {
+            const d = Math.round((t.endMs - simMs) / 86400000);
+            data.cell.styles.textColor = d < 0
+              ? hexToRgb(PALETTE.rose)
+              : d <= 7 ? hexToRgb(PALETTE.amber) : [100, 116, 139];
+          }
         }
       }
     });
@@ -749,7 +770,8 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
 
   let y = stripY + stripH + 14;
   y = renderSection('OVERDUE — IMMEDIATE ACTION', overdue, y, hexToRgb(PALETTE.rose), 'No overdue activities in this selection.');
-  y = renderSection('OUTSTANDING — TO BE COMPLETED', upcoming, y, hexToRgb(PALETTE.blue), 'No outstanding activities in this selection.');
+  y = renderSection('IN PROGRESS & PLANNED ACTIVITIES', upcoming, y, hexToRgb(PALETTE.blue), 'No in-progress or planned activities in this selection.');
+  y = renderSection('COMPLETED ACTIVITIES', completed, y, [16, 185, 129], 'No completed activities in this selection.');
 
   /* ============================================================
      Compressed Gantt — grouped by work package
@@ -1035,7 +1057,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     );
   }
 
-  doc.save(`T6_Action_Matrix_${todayStamp()}.pdf`);
+  doc.save(`Radi_Energy_Solutions_Action_Matrix_${todayStamp()}.pdf`);
 }
 
 /* Re-exported so App can build the filter summary without importing stats twice. */
