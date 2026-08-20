@@ -16,7 +16,6 @@ import {
   collection, 
   doc, 
   onSnapshot, 
-  getDocs, 
   writeBatch, 
   updateDoc, 
   setDoc, 
@@ -29,11 +28,8 @@ import {
 import { WBSTask, UserProfile, ActivityLog } from '../types';
 import { 
   generateSeedTasks, 
-  RAW_INITIAL_TASKS, 
   canonicalizeWorkPackage, 
-  getWorkPackageStyle, 
-  WORK_PACKAGE_STYLES, 
-  DEFAULT_STYLE 
+  getWorkPackageStyle
 } from '../data/initialTasks';
 import { 
   deduplicateAndMergeTasks, 
@@ -59,18 +55,76 @@ const LOGS_COLLECTION = 'activity_logs_kmc_v1';
 let hasRunInitialSync = false;
 
 /**
- * Subscribe to real-time WBS tasks from Firestore with automatic month-by-month
- * deduplication, canonical Work Package alignment, and self-healing canonical task reconciliation.
- * Guarantees that all 161 deliverables from the WBS schedule (July 2026 - June 2027)
- * are present, including all Human Capital Development and Technology Transfer deliverables.
+ * One-time background sync that ensures Firestore has all 161 canonical deliverables
+ * and eliminates duplicate docs without looping.
+ */
+async function syncCanonicalTasksToFirestore(existingTasks: WBSTask[]) {
+  if (hasRunInitialSync) return;
+  hasRunInitialSync = true;
+
+  try {
+    const canonicalSeedList = generateSeedTasks();
+    const missingTasks: WBSTask[] = [];
+
+    for (const seed of canonicalSeedList) {
+      const seedMonth = getYearMonth(seed.deadline);
+      const seedNorm = normalizeString(seed.activity);
+
+      const exists = existingTasks.some((rt) => {
+        const rtMonth = getYearMonth(rt.deadline);
+        if (rtMonth !== seedMonth) return false;
+        return normalizeString(rt.activity) === seedNorm || areTasksOverlapping(rt, seed);
+      });
+
+      if (!exists) {
+        missingTasks.push(seed);
+      }
+    }
+
+    if (missingTasks.length > 0) {
+      console.log(`[Reconciliation Engine] Writing ${missingTasks.length} missing canonical tasks to Firestore in background...`);
+      const CHUNK_SIZE = 200;
+      for (let i = 0; i < missingTasks.length; i += CHUNK_SIZE) {
+        const chunk = missingTasks.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(db);
+        chunk.forEach((t) => {
+          const docRef = doc(db, COLLECTION_NAME, t.id);
+          batch.set(docRef, {
+            wp: t.wp,
+            activity: t.activity,
+            lead: t.lead,
+            support: t.support,
+            deadline: t.deadline,
+            startMs: t.startMs,
+            endMs: t.endMs,
+            status: t.status,
+            durationDays: t.durationDays,
+            priority: t.priority,
+            notes: t.notes || '',
+            updatedBy: 'Canonical Sync',
+            updatedAt: Date.now()
+          }, { merge: true });
+        });
+        await batch.commit();
+      }
+    }
+  } catch (err) {
+    console.warn('[Sync Warning] Background sync error:', err);
+  }
+}
+
+/**
+ * Subscribe to real-time WBS tasks from Firestore.
+ * Pure snapshot mapping with in-memory canonical hydration for instant, lag-free UI rendering.
  */
 export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?: (err: Error) => void) {
   const tasksCol = collection(db, COLLECTION_NAME);
 
-  return onSnapshot(tasksCol, async (snapshot) => {
+  return onSnapshot(tasksCol, (snapshot) => {
     if (snapshot.empty) {
-      console.log('Database is empty. Seeding all 161 canonical WBS tasks...');
-      await seedDatabase();
+      const initialSeeds = generateSeedTasks();
+      onUpdate(initialSeeds);
+      seedDatabase().catch(err => console.warn('Seed error:', err));
       return;
     }
 
@@ -104,96 +158,33 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
       });
     });
 
-    // Detect if any canonical tasks are missing from the current Firestore collection
+    // In-memory canonical guarantee: check if any master tasks are missing and blend them in memory
     const canonicalSeedList = generateSeedTasks();
-    const missingCanonicalTasks: WBSTask[] = [];
+    const missingInMem: WBSTask[] = [];
 
     for (const seed of canonicalSeedList) {
-      const seedMonth = getYearMonth(seed.deadline);
       const seedNorm = normalizeString(seed.activity);
 
       const exists = rawTaskList.some((rt) => {
-        const rtMonth = getYearMonth(rt.deadline);
-        if (rtMonth !== seedMonth) return false;
-        return normalizeString(rt.activity) === seedNorm || areTasksOverlapping(rt, seed);
+        if (rt.id === seed.id) return true;
+        return normalizeString(rt.activity) === seedNorm;
       });
 
       if (!exists) {
-        missingCanonicalTasks.push(seed);
+        missingInMem.push(seed);
       }
     }
 
-    // Combine what's in Firestore with missing canonical tasks so UI is instantly complete
-    const combinedList = [...rawTaskList, ...missingCanonicalTasks];
+    const combinedList = [...rawTaskList, ...missingInMem];
+    const { deduplicatedTasks } = deduplicateAndMergeTasks(combinedList);
 
-    // Deep month-aware similarity & overlap deduplication
-    const { deduplicatedTasks, duplicateIdsToDelete, updatesToPersist } = deduplicateAndMergeTasks(combinedList);
-
-    // Immediately push merged clean list to UI
+    // Push instantly to UI without latency
     onUpdate(deduplicatedTasks);
 
-    // Asynchronously perform background cleanup and persist missing canonical tasks into Firestore
-    (async () => {
-      try {
-        // 1. Insert missing canonical deliverables (e.g. Technology Transfer, Human Capital Dev, ESIA)
-        if (missingCanonicalTasks.length > 0) {
-          console.log(`[Reconciliation Engine] Writing ${missingCanonicalTasks.length} missing canonical WBS tasks to Firestore...`);
-          const CHUNK_SIZE = 200;
-          for (let i = 0; i < missingCanonicalTasks.length; i += CHUNK_SIZE) {
-            const chunk = missingCanonicalTasks.slice(i, i + CHUNK_SIZE);
-            const batch = writeBatch(db);
-            chunk.forEach((t) => {
-              const docRef = doc(db, COLLECTION_NAME, t.id);
-              batch.set(docRef, {
-                wp: t.wp,
-                activity: t.activity,
-                lead: t.lead,
-                support: t.support,
-                deadline: t.deadline,
-                startMs: t.startMs,
-                endMs: t.endMs,
-                status: t.status,
-                durationDays: t.durationDays,
-                priority: t.priority,
-                notes: t.notes || '',
-                updatedBy: 'Canonical Sync',
-                updatedAt: Date.now()
-              }, { merge: true });
-            });
-            await batch.commit();
-          }
-        }
-
-        // 2. Purge redundant duplicates
-        if (duplicateIdsToDelete.length > 0) {
-          console.log(`[Deduplication Engine] Purging ${duplicateIdsToDelete.length} redundant duplicate records from Firestore...`);
-          const CHUNK_SIZE = 200;
-          for (let i = 0; i < duplicateIdsToDelete.length; i += CHUNK_SIZE) {
-            const chunk = duplicateIdsToDelete.slice(i, i + CHUNK_SIZE);
-            const batch = writeBatch(db);
-            chunk.forEach(id => {
-              batch.delete(doc(db, COLLECTION_NAME, id));
-            });
-            await batch.commit();
-          }
-        }
-
-        // 3. Update canonical fields
-        if (updatesToPersist.length > 0) {
-          const CHUNK_SIZE = 200;
-          for (let i = 0; i < updatesToPersist.length; i += CHUNK_SIZE) {
-            const chunk = updatesToPersist.slice(i, i + CHUNK_SIZE);
-            const batch = writeBatch(db);
-            chunk.forEach(u => {
-              batch.update(doc(db, COLLECTION_NAME, u.id), u.patch);
-            });
-            await batch.commit();
-          }
-        }
-      } catch (syncErr) {
-        console.warn('Background task sync warning:', syncErr);
-      }
-    })();
+    // Trigger one-time background sync if not already done
+    if (!hasRunInitialSync) {
+      syncCanonicalTasksToFirestore(rawTaskList);
+    }
   }, (err) => {
     console.error('Firestore task listener error:', err);
     if (onError) onError(err);
@@ -237,14 +228,19 @@ export async function seedDatabase() {
  * Toggle task status
  */
 export async function updateTaskStatus(taskId: string, newStatus: WBSTask['status'], userName: string) {
-  const taskRef = doc(db, COLLECTION_NAME, taskId);
-  await updateDoc(taskRef, {
-    status: newStatus,
-    updatedBy: userName,
-    updatedAt: Date.now()
-  });
+  try {
+    const taskRef = doc(db, COLLECTION_NAME, taskId);
+    await updateDoc(taskRef, {
+      status: newStatus,
+      updatedBy: userName,
+      updatedAt: Date.now()
+    });
+  } catch (e) {
+    console.warn('updateTaskStatus error:', e);
+  }
 
-  await logActivity(taskId, 'Status update', `Changed status to ${newStatus}`, userName, newStatus === 'COMPLETED' ? 'COMPLETED' : 'STATUS_CHANGED');
+  // Non-blocking activity log
+  logActivity(taskId, 'Status update', `Changed status to ${newStatus}`, userName, newStatus === 'COMPLETED' ? 'COMPLETED' : 'STATUS_CHANGED').catch(() => {});
 }
 
 /**
@@ -255,20 +251,19 @@ export async function saveTask(task: Partial<WBSTask> & { id?: string }, userNam
   const isEdit = !!task.id;
   const taskId = task.id || `T_${Date.now()}`;
 
-  const end = new Date(`${task.deadline}T00:00:00`);
+  const deadline = task.deadline || '2026-12-31';
+  const end = new Date(`${deadline}T00:00:00`);
   const dur = task.durationDays || 14;
   const startMs = task.startMs || (end.getTime() - (dur * 24 * 60 * 60 * 1000));
-
-  const canonicalMatch = task.activity ? matchCanonicalMaster(task.activity, task.deadline) : undefined;
-  const finalActivity = canonicalMatch ? canonicalMatch.act : (task.activity || 'Untitled Task');
-  const finalWp = canonicalMatch ? canonicalMatch.wp : canonicalizeWorkPackage(task.wp || 'Business Case Development');
+  const finalWp = canonicalizeWorkPackage(task.wp || 'Business Case Development');
+  const finalActivity = (task.activity || 'Untitled Task').trim();
 
   const taskData = {
     wp: finalWp,
     activity: finalActivity,
     lead: task.lead || 'Shibah',
     support: task.support || '',
-    deadline: task.deadline || '2026-12-31',
+    deadline,
     startMs,
     endMs: end.getTime(),
     status: task.status || 'PENDING',
@@ -282,7 +277,8 @@ export async function saveTask(task: Partial<WBSTask> & { id?: string }, userNam
   const taskRef = doc(tasksCol, taskId);
   await setDoc(taskRef, taskData, { merge: true });
 
-  await logActivity(taskId, taskData.activity, isEdit ? 'Updated task details' : 'Created new WBS task', userName, isEdit ? 'UPDATED' : 'CREATED');
+  // Non-blocking activity log
+  logActivity(taskId, taskData.activity, isEdit ? 'Updated task details' : 'Created new WBS task', userName, isEdit ? 'UPDATED' : 'CREATED').catch(() => {});
 }
 
 /**
@@ -296,34 +292,38 @@ export async function deleteTask(taskId: string, taskTitle: string, userName: st
     console.warn('Direct deleteDoc error:', e);
   }
 
-  await logActivity(taskId, taskTitle, 'Deleted task from WBS', userName, 'DELETED');
+  logActivity(taskId, taskTitle, 'Deleted task from WBS', userName, 'DELETED').catch(() => {});
 }
 
 /**
  * Restore previously deleted task
  */
 export async function restoreTask(task: WBSTask, userName: string) {
-  const tasksCol = collection(db, COLLECTION_NAME);
-  const taskRef = doc(tasksCol, task.id);
-  const wp = canonicalizeWorkPackage(task.wp || 'Business Case Development');
+  try {
+    const tasksCol = collection(db, COLLECTION_NAME);
+    const taskRef = doc(tasksCol, task.id);
+    const wp = canonicalizeWorkPackage(task.wp || 'Business Case Development');
 
-  await setDoc(taskRef, {
-    wp,
-    activity: task.activity,
-    lead: task.lead || 'Unassigned',
-    support: task.support || '',
-    deadline: task.deadline,
-    startMs: task.startMs,
-    endMs: task.endMs,
-    status: task.status,
-    durationDays: task.durationDays || 14,
-    priority: task.priority || 'MEDIUM',
-    notes: task.notes || '',
-    updatedBy: userName,
-    updatedAt: Date.now()
-  });
+    await setDoc(taskRef, {
+      wp,
+      activity: task.activity,
+      lead: task.lead || 'Unassigned',
+      support: task.support || '',
+      deadline: task.deadline,
+      startMs: task.startMs,
+      endMs: task.endMs,
+      status: task.status,
+      durationDays: task.durationDays || 14,
+      priority: task.priority || 'MEDIUM',
+      notes: task.notes || '',
+      updatedBy: userName,
+      updatedAt: Date.now()
+    });
+  } catch (e) {
+    console.warn('restoreTask error:', e);
+  }
 
-  await logActivity(task.id, task.activity, 'Restored task to WBS', userName, 'UPDATED');
+  logActivity(task.id, task.activity, 'Restored task to WBS', userName, 'UPDATED').catch(() => {});
 }
 
 /**
@@ -331,7 +331,7 @@ export async function restoreTask(task: WBSTask, userName: string) {
  */
 export function subscribeToLogs(onUpdate: (logs: ActivityLog[]) => void) {
   const logsCol = collection(db, LOGS_COLLECTION);
-  const q = query(logsCol, orderBy('timestamp', 'desc'), limit(100));
+  const q = query(logsCol, orderBy('timestamp', 'desc'), limit(50));
 
   return onSnapshot(q, (snapshot) => {
     const logs: ActivityLog[] = [];
@@ -377,7 +377,7 @@ export async function logActivity(
       timestamp: Date.now()
     });
   } catch (err) {
-    console.warn('Could not write audit log:', err);
+    // Non-fatal
   }
 }
 

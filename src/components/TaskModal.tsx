@@ -60,22 +60,26 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (!activity.trim()) return;
 
     setIsSaving(true);
+    const savePayload = {
+      id: task?.id,
+      wp,
+      activity,
+      lead,
+      support,
+      deadline,
+      durationDays,
+      status,
+      priority,
+      notes
+    };
+
     try {
-      await onSave({
-        id: task?.id,
-        wp,
-        activity,
-        lead,
-        support,
-        deadline,
-        durationDays,
-        status,
-        priority,
-        notes
-      });
+      // Fire onSave and close modal immediately so UI never blocks or freezes
+      onSave(savePayload);
       onClose();
     } catch (err) {
       console.error('Save error:', err);
+      onClose();
     } finally {
       setIsSaving(false);
     }
@@ -85,10 +89,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (!task?.id || !onDelete) return;
     setIsSaving(true);
     try {
-      await onDelete(task);
+      onDelete(task);
       onClose();
     } catch (err) {
       console.error('Delete error:', err);
+      onClose();
     } finally {
       setIsSaving(false);
     }

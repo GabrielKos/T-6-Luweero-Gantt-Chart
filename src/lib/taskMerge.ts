@@ -313,18 +313,14 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
   if (cluster.length === 1) {
     const single = cluster[0];
     const canonicalWp = canonicalizeWorkPackage(single.wp);
-    const canonicalMaster = matchCanonicalMaster(single.activity, single.deadline);
-    const resolvedActivity = canonicalMaster ? canonicalMaster.act : single.activity;
-    const resolvedWp = canonicalMaster ? canonicalMaster.wp : canonicalWp;
-    const resolvedStyle = getWorkPackageStyle(resolvedWp);
+    const resolvedStyle = getWorkPackageStyle(canonicalWp);
 
-    const needsUpdate = single.wp !== resolvedWp || single.activity !== resolvedActivity;
+    const needsUpdate = single.wp !== canonicalWp;
 
     return {
       merged: {
         ...single,
-        wp: resolvedWp,
-        activity: resolvedActivity,
+        wp: canonicalWp,
         style: resolvedStyle
       },
       duplicateDocIds: [],
@@ -332,10 +328,14 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
     };
   }
 
-  // 1. Determine most advanced status
+  // 1. Sort cluster by updatedAt desc to get the most recent user edit
+  const sortedByRecent = [...cluster].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const latestTask = sortedByRecent[0];
+
+  // 2. Determine most advanced status
   let highestStatusRank = 0;
   let resolvedStatus: TaskStatus = 'PENDING';
-  let bestStatusTask = cluster[0];
+  let bestStatusTask = latestTask;
 
   for (const t of cluster) {
     const rank = getStatusRank(t.status);
@@ -346,7 +346,7 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
     }
   }
 
-  // 2. Determine canonical master task
+  // 3. Resolve title & Work Package (prioritize user latest edit, then canonical match if available)
   let canonicalMaster: RawTaskItem | undefined;
   for (const t of cluster) {
     const match = matchCanonicalMaster(t.activity, t.deadline);
@@ -356,31 +356,22 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
     }
   }
 
-  // 3. Resolve title & Work Package
-  let finalActivity = canonicalMaster?.act || '';
-  if (!finalActivity) {
-    let longestTitle = '';
-    for (const t of cluster) {
-      if (t.activity && t.activity.length > longestTitle.length) {
-        longestTitle = t.activity;
-      }
-    }
-    finalActivity = longestTitle || cluster[0].activity;
-  }
-
-  const finalWp = canonicalMaster?.wp || canonicalizeWorkPackage(bestStatusTask.wp || cluster[0].wp);
+  const finalActivity = latestTask.activity || canonicalMaster?.act || cluster[0].activity;
+  const finalWp = canonicalizeWorkPackage(latestTask.wp || bestStatusTask.wp || cluster[0].wp);
   const finalStyle = getWorkPackageStyle(finalWp);
 
-  // 4. Resolve dates & duration
-  const finalDeadline = canonicalMaster?.dl || bestStatusTask.deadline || cluster[0].deadline;
-  const finalDuration = canonicalMaster?.dur || bestStatusTask.durationDays || cluster[0].durationDays || 14;
+  // 4. Resolve dates & duration strictly from latest user edit
+  const finalDeadline = latestTask.deadline || bestStatusTask.deadline || cluster[0].deadline || canonicalMaster?.dl || '2026-12-31';
+  const finalDuration = latestTask.durationDays || bestStatusTask.durationDays || cluster[0].durationDays || canonicalMaster?.dur || 14;
   const end = new Date(`${finalDeadline}T00:00:00`);
   const finalEndMs = end.getTime();
-  const finalStartMs = finalEndMs - (finalDuration * 24 * 60 * 60 * 1000);
+  const finalStartMs = latestTask.startMs && latestTask.endMs === finalEndMs
+    ? latestTask.startMs
+    : finalEndMs - (finalDuration * 24 * 60 * 60 * 1000);
 
   // 5. Resolve lead & support officers
-  const finalLead = canonicalMaster?.lead || bestStatusTask.lead || cluster[0].lead || 'Shibah';
-  const finalSupport = canonicalMaster?.support || bestStatusTask.support || cluster[0].support || '';
+  const finalLead = latestTask.lead || bestStatusTask.lead || cluster[0].lead || canonicalMaster?.lead || 'Shibah';
+  const finalSupport = latestTask.support || bestStatusTask.support || cluster[0].support || canonicalMaster?.support || '';
 
   // 6. Resolve highest priority
   let highestPriorityRank = 0;
@@ -403,18 +394,12 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
   const combinedNotes = Array.from(notesSet).join('\n---\n');
 
   // 8. Latest update metadata
-  let latestUpdateAt = 0;
-  let latestUpdateBy = 'Team Member';
-  for (const t of cluster) {
-    if (t.updatedAt && t.updatedAt > latestUpdateAt) {
-      latestUpdateAt = t.updatedAt;
-      latestUpdateBy = t.updatedBy || latestUpdateBy;
-    }
-  }
+  const latestUpdateAt = latestTask.updatedAt || Date.now();
+  const latestUpdateBy = latestTask.updatedBy || 'Team Member';
 
   // 9. Pick the primary document ID
   const primaryDoc = cluster.find(t => /^T\d+$/.test(t.id)) ||
-                     cluster.find(t => t.id === bestStatusTask.id) ||
+                     latestTask ||
                      cluster[0];
 
   const duplicateDocIds = cluster
@@ -435,7 +420,7 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
     priority: resolvedPriority,
     notes: combinedNotes,
     updatedBy: latestUpdateBy,
-    updatedAt: latestUpdateAt || Date.now(),
+    updatedAt: latestUpdateAt,
     style: finalStyle
   };
 

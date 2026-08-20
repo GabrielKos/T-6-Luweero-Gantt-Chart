@@ -26,7 +26,7 @@ import { AuthModal } from './components/AuthModal';
 import { ActivityLogDrawer } from './components/ActivityLogDrawer';
 import { UndoToast } from './components/UndoToast';
 import { ExportPdfModal, ExportSectionChoice } from './components/ExportPdfModal';
-import { generateSeedTasks, CANONICAL_WORK_PACKAGES, canonicalizeWorkPackage } from './data/initialTasks';
+import { generateSeedTasks, CANONICAL_WORK_PACKAGES, canonicalizeWorkPackage, getWorkPackageStyle } from './data/initialTasks';
 import { PLANT_BACKGROUND } from './assets/plantBackground';
 
 export default function App() {
@@ -255,7 +255,15 @@ export default function App() {
     requireAuth(async () => {
       const newStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
       const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
-      await updateTaskStatus(taskId, newStatus, activeUserName);
+      
+      // Optimistic local state update
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus, updatedAt: Date.now(), updatedBy: activeUserName } : t));
+
+      try {
+        await updateTaskStatus(taskId, newStatus, activeUserName);
+      } catch (err) {
+        console.error('Update status error:', err);
+      }
     });
   };
 
@@ -275,7 +283,47 @@ export default function App() {
 
   const handleSaveTask = async (taskData: Partial<WBSTask> & { id?: string }) => {
     const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
-    await saveTask(taskData, activeUserName);
+    const isEdit = !!taskData.id;
+    const taskId = taskData.id || `T_${Date.now()}`;
+    const deadline = taskData.deadline || '2026-12-31';
+    const dur = taskData.durationDays || 14;
+    const end = new Date(`${deadline}T00:00:00`);
+    const startMs = taskData.startMs || (end.getTime() - (dur * 24 * 60 * 60 * 1000));
+    const wp = canonicalizeWorkPackage(taskData.wp || 'Business Case Development');
+
+    const updatedTask: WBSTask = {
+      id: taskId,
+      wp,
+      activity: taskData.activity || 'Untitled Task',
+      lead: taskData.lead || 'Shibah',
+      support: taskData.support || '',
+      deadline,
+      startMs,
+      endMs: end.getTime(),
+      status: taskData.status || 'PENDING',
+      durationDays: dur,
+      priority: taskData.priority || 'MEDIUM',
+      notes: taskData.notes || '',
+      updatedBy: activeUserName,
+      updatedAt: Date.now(),
+      style: getWorkPackageStyle(wp)
+    };
+
+    // Optimistically update React state immediately (0ms delay)
+    setTasks(prev => {
+      if (isEdit) {
+        return prev.map(t => t.id === taskId ? { ...t, ...updatedTask } : t);
+      } else {
+        return [updatedTask, ...prev];
+      }
+    });
+
+    // Asynchronously persist to Firestore
+    try {
+      await saveTask(taskData, activeUserName);
+    } catch (err) {
+      console.error('Save task Firestore error:', err);
+    }
   };
 
   const handleDeleteTask = async (taskToDelete: WBSTask) => {
