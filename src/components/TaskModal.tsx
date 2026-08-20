@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WBSTask, TaskStatus, TaskPriority } from '../types';
-import { WORK_PACKAGE_STYLES, TEAM_MEMBERS } from '../data/initialTasks';
+import { CANONICAL_WORK_PACKAGES, WORK_PACKAGE_STYLES, TEAM_MEMBERS, canonicalizeWorkPackage } from '../data/initialTasks';
 import { X, Save, Trash2, Calendar, User, FileText, CheckCircle2 } from 'lucide-react';
 
 interface TaskModalProps {
@@ -94,7 +94,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const workPackages = Object.keys(WORK_PACKAGE_STYLES);
+  const workPackages = CANONICAL_WORK_PACKAGES;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">

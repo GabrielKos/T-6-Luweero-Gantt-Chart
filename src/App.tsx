@@ -14,6 +14,7 @@ import {
   deleteTask,
   restoreTask
 } from './lib/firebase';
+import { deduplicateAndMergeTasks } from './lib/taskMerge';
 import { TIME_VIEWS, TimeViewTabs, getViewIdForDate } from './components/TimeViewTabs';
 import { getEATDateString } from './lib/dateUtils';
 import { Header, AppView } from './components/Header';
@@ -25,7 +26,7 @@ import { AuthModal } from './components/AuthModal';
 import { ActivityLogDrawer } from './components/ActivityLogDrawer';
 import { UndoToast } from './components/UndoToast';
 import { ExportPdfModal, ExportSectionChoice } from './components/ExportPdfModal';
-import { generateSeedTasks } from './data/initialTasks';
+import { generateSeedTasks, CANONICAL_WORK_PACKAGES, canonicalizeWorkPackage } from './data/initialTasks';
 import { PLANT_BACKGROUND } from './assets/plantBackground';
 
 export default function App() {
@@ -112,7 +113,8 @@ export default function App() {
     setSyncStatus('syncing');
     const unsubscribeTasks = subscribeToTasks(
       (updatedTasks) => {
-        setTasks(updatedTasks);
+        const { deduplicatedTasks } = deduplicateAndMergeTasks(updatedTasks);
+        setTasks(deduplicatedTasks);
         setSyncStatus('synced');
       },
       (err) => {
@@ -121,7 +123,10 @@ export default function App() {
         // still work — the header dot turns red so nobody mistakes it for live data.
         console.error('Task sync error:', err);
         setSyncStatus('offline');
-        setTasks(prev => (prev.length ? prev : generateSeedTasks()));
+        setTasks(prev => {
+          const fallback = prev.length ? prev : generateSeedTasks();
+          return deduplicateAndMergeTasks(fallback).deduplicatedTasks;
+        });
       }
     );
 
@@ -157,16 +162,15 @@ export default function App() {
   }, [tasks]);
 
   const workPackages = useMemo(() => {
-    const set = new Set<string>();
-    tasks.forEach(t => { if (t.wp) set.add(t.wp); });
-    return Array.from(set).sort();
-  }, [tasks]);
+    return Array.from(CANONICAL_WORK_PACKAGES);
+  }, []);
 
-  // Apply filters
+  // Apply filters with clean deduplication
   const filteredTasks = useMemo(() => {
     const simMs = new Date(`${simulationDate}T00:00:00`).getTime();
+    const cleanList = deduplicateAndMergeTasks(tasks).deduplicatedTasks;
 
-    return tasks.filter((t) => {
+    return cleanList.filter((t) => {
       let matches = true;
 
       // Lead Officer
@@ -180,12 +184,12 @@ export default function App() {
       }
 
       // Work Package
-      if (filters.package !== 'ALL' && t.wp !== filters.package) matches = false;
+      if (filters.package !== 'ALL' && canonicalizeWorkPackage(t.wp) !== filters.package) matches = false;
 
       // Effective Status
-      let effectiveStatus = t.status;
+      let effectiveStatus: string = t.status;
       if (effectiveStatus !== 'COMPLETED' && t.endMs < simMs) {
-        effectiveStatus = 'OVERDUE' as any;
+        effectiveStatus = 'OVERDUE';
       }
 
       // Status Filter

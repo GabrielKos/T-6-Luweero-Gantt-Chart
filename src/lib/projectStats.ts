@@ -1,4 +1,5 @@
 import { WBSTask } from '../types';
+import { canonicalizeWorkPackage } from '../data/initialTasks';
 
 /**
  * Shared derivation layer for the Overall Progress page and both exports.
@@ -20,12 +21,12 @@ export const PROGRAMME_END = '2027-06-30';
  * same colours the app shows on screen.
  */
 export const WP_HEX: Record<string, string> = {
-  'Business Case Development': '#3b82f6',        // blue-500
-  'Corporate Formation & ESIA': '#a855f7',       // purple-500
-  'Plant Design & Engineering': '#14b8a6',       // teal-500
-  'Technology Transfer Agreement': '#f97316',    // orange-500
-  'Construction, Tooling, & Furnishing': '#f59e0b', // amber-500
-  'Human Capital Development': '#ec4899'         // pink-500
+  'Business Case Development': '#3b82f6',                          // blue-500
+  'Corporate Formation & ESIA': '#a855f7',                         // purple-500
+  'Plant Design & Engineering Specifications of the Plant': '#14b8a6', // teal-500
+  'Technology Transfer Agreement': '#f97316',                      // orange-500
+  'Construction, Tooling, and Furnishing of the Plant': '#f59e0b', // amber-500
+  'Human Capital Development': '#ec4899'                           // pink-500
 };
 
 export const DEFAULT_WP_HEX = '#64748b'; // slate-500
@@ -49,7 +50,8 @@ export const PALETTE = {
 export type EffectiveStatus = 'COMPLETED' | 'OVERDUE' | 'IN_PROGRESS' | 'PENDING';
 
 export function wpHex(wp: string): string {
-  return WP_HEX[wp] || DEFAULT_WP_HEX;
+  const canonical = canonicalizeWorkPackage(wp);
+  return WP_HEX[canonical] || DEFAULT_WP_HEX;
 }
 
 /** Midnight-anchored ms for a YYYY-MM-DD string, in the browser's local zone. */
@@ -123,7 +125,7 @@ export interface PackageStat extends StatusCounts {
 export function packageStats(tasks: WBSTask[], simMs: number): PackageStat[] {
   const groups = new Map<string, WBSTask[]>();
   tasks.forEach(t => {
-    const key = t.wp || 'Unassigned';
+    const key = canonicalizeWorkPackage(t.wp || 'Unassigned');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(t);
   });

@@ -48,7 +48,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   // Filter tasks within date window if specific month selected
   let visibleTasks = tasks;
   if (currentView.id !== 'overall') {
-    visibleTasks = tasks.filter(t => t.startMs <= viewEndMs && t.endMs >= viewStartMs);
+    visibleTasks = tasks.filter(t => 
+      (t.startMs <= viewEndMs && t.endMs >= viewStartMs) ||
+      (t.deadline >= currentView.start && t.deadline <= currentView.end)
+    );
   }
 
   // Synchronize vertical scroll between left pane and right pane without feedback loops
