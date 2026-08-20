@@ -8,7 +8,7 @@ interface TaskModalProps {
   task: WBSTask | null;
   onClose: () => void;
   onSave: (task: Partial<WBSTask> & { id?: string }) => Promise<void>;
-  onDelete?: (taskId: string, taskTitle: string) => Promise<void>;
+  onDelete?: (task: WBSTask) => Promise<void> | void;
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({
@@ -83,16 +83,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleDelete = async () => {
     if (!task?.id || !onDelete) return;
-    if (confirm(`Are you sure you want to delete "${task.activity}"?`)) {
-      setIsSaving(true);
-      try {
-        await onDelete(task.id, task.activity);
-        onClose();
-      } catch (err) {
-        console.error('Delete error:', err);
-      } finally {
-        setIsSaving(false);
-      }
+    setIsSaving(true);
+    try {
+      await onDelete(task);
+      onClose();
+    } catch (err) {
+      console.error('Delete error:', err);
+    } finally {
+      setIsSaving(false);
     }
   };
 

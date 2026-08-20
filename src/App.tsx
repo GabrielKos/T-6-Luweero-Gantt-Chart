@@ -11,7 +11,8 @@ import {
   listenToAuth, 
   updateTaskStatus, 
   saveTask, 
-  deleteTask 
+  deleteTask,
+  restoreTask
 } from './lib/firebase';
 import { TIME_VIEWS, TimeViewTabs, getViewIdForDate } from './components/TimeViewTabs';
 import { getEATDateString } from './lib/dateUtils';
@@ -22,6 +23,8 @@ import { OverallProgress } from './components/OverallProgress';
 import { TaskModal } from './components/TaskModal';
 import { AuthModal } from './components/AuthModal';
 import { ActivityLogDrawer } from './components/ActivityLogDrawer';
+import { UndoToast } from './components/UndoToast';
+import { ExportPdfModal, ExportSectionChoice } from './components/ExportPdfModal';
 import { generateSeedTasks } from './data/initialTasks';
 import { PLANT_BACKGROUND } from './assets/plantBackground';
 
@@ -42,6 +45,8 @@ export default function App() {
   const [activeView, setActiveView] = useState<AppView>('gantt');
   // which export is running, so the buttons can show progress and stay disabled
   const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [lastDeletedTask, setLastDeletedTask] = useState<WBSTask | null>(null);
 
   // Continuously sync with East Africa Time (UTC+3) World Clock
   useEffect(() => {
@@ -269,11 +274,28 @@ export default function App() {
     await saveTask(taskData, activeUserName);
   };
 
-  const handleDeleteTask = async (taskId: string, taskTitle: string) => {
-    requireAuth(async () => {
+  const handleDeleteTask = async (taskToDelete: WBSTask) => {
+    try {
       const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
-      await deleteTask(taskId, taskTitle, activeUserName);
-    });
+      setLastDeletedTask(taskToDelete);
+      // Optimistically remove from state immediately for snappy UI
+      setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
+      await deleteTask(taskToDelete.id, taskToDelete.activity, activeUserName);
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
+  };
+
+  const handleUndoDelete = async (taskToRestore: WBSTask) => {
+    try {
+      const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
+      // Optimistically restore to state immediately
+      setTasks(prev => [taskToRestore, ...prev.filter(t => t.id !== taskToRestore.id)]);
+      setLastDeletedTask(null);
+      await restoreTask(taskToRestore, activeUserName);
+    } catch (err) {
+      console.error('Restore error:', err);
+    }
   };
 
   const handleShareLink = () => {
@@ -308,7 +330,7 @@ export default function App() {
     return parts;
   }, [filters]);
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (section: ExportSectionChoice = 'all') => {
     if (isExporting) return;
     setIsExporting('pdf');
     try {
@@ -319,8 +341,10 @@ export default function App() {
         allTasks: tasks,
         simulationDate,
         view: currentView,
-        filterSummary
+        filterSummary,
+        exportSection: section
       });
+      setIsExportModalOpen(false);
     } catch (err) {
       console.error('PDF export failed:', err);
       alert('Could not build the PDF. Please try again.');
@@ -377,7 +401,7 @@ export default function App() {
             supportingMembers={supportingMembers}
             workPackages={workPackages}
             onAddNewTask={handleOpenCreateTask}
-            onExport={handleExportPDF}
+            onExport={() => setIsExportModalOpen(true)}
             onExportPng={handleExportPNG}
             onShareLink={handleShareLink}
             isCopied={isCopied}
@@ -413,7 +437,7 @@ export default function App() {
             tasks={tasks}
             simulationDate={simulationDate}
             onExportPng={handleExportPNG}
-            onExportPdf={handleExportPDF}
+            onExportPdf={() => setIsExportModalOpen(true)}
             isExporting={isExporting}
           />
         </main>
@@ -426,6 +450,22 @@ export default function App() {
         onClose={() => setIsTaskModalOpen(false)}
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
+      />
+
+      <ExportPdfModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onConfirmExport={handleExportPDF}
+        activityCount={exportTasks.length}
+        currentView={currentView}
+        filterSummary={filterSummary}
+        isExporting={isExporting === 'pdf'}
+      />
+
+      <UndoToast
+        deletedTask={lastDeletedTask}
+        onUndo={handleUndoDelete}
+        onDismiss={() => setLastDeletedTask(null)}
       />
 
       <AuthModal

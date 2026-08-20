@@ -402,10 +402,11 @@ export interface PdfExportContext {
   simulationDate: string;
   view: ViewOption;          // the selected period
   filterSummary: string[];   // human-readable list of active filters
+  exportSection?: 'all' | 'matrix' | 'gantt';
 }
 
 export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void> {
-  const { tasks, simulationDate, view, filterSummary } = cx;
+  const { tasks, simulationDate, view, filterSummary, exportSection = 'all' } = cx;
   const simMs = dayMs(simulationDate);
 
   const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
@@ -509,7 +510,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     return t.trimEnd() + '…';
   }
 
-  let pageKicker = 'ACTIVITY MATRIX';
+  let pageKicker = exportSection === 'gantt' ? 'PROGRAMME GANTT' : 'ACTIVITY MATRIX';
   /** Set while autoTable owns the page, so its continuation pages get a card. */
   let inTableSection = false;
 
@@ -597,186 +598,189 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
   doc.internal.events.subscribe('addPage', drawChrome);
   drawChrome(); // page 1
 
-  /* ---------- summary strip ---------- */
-  const counts = countStatuses(tasks, simMs);
-  const pct = counts.total ? Math.round((counts.completed / counts.total) * 100) : 0;
-  const daysToCop = Math.round((dayMs(COP_TARGET) - simMs) / 86400000);
+  if (exportSection === 'matrix' || exportSection === 'all') {
+    /* ---------- summary strip ---------- */
+    const counts = countStatuses(tasks, simMs);
+    const pct = counts.total ? Math.round((counts.completed / counts.total) * 100) : 0;
+    const daysToCop = Math.round((dayMs(COP_TARGET) - simMs) / 86400000);
 
-  const stripY = headerH + 12;
-  const stripH = 46;
-  const cells: [string, string, [number, number, number]][] = [
-    ['Overall progress', `${pct}%`, blue],
-    ['Completed', String(counts.completed), [16, 185, 129]],
-    ['In progress', String(counts.inProgress), hexToRgb(PALETTE.blue)],
-    ['Overdue', String(counts.overdue), hexToRgb(PALETTE.rose)],
-    ['Pending', String(counts.pending), hexToRgb(PALETTE.slate)],
-    ['Days to COP', String(daysToCop), ink]
-  ];
-  const cellW = (pageW - margin * 2 - 5 * 7) / 6;
-  cells.forEach((c, i) => {
-    const x = margin + i * (cellW + 7);
-    glassRect(x, stripY, cellW, stripH, 9, [255, 255, 255], 0.86, [255, 255, 255], 0.6);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.6);
-    doc.setTextColor(100, 116, 139);
-    doc.text(c[0].toUpperCase(), x + 10, stripY + 15);
-    doc.setFontSize(17);
-    doc.setTextColor(c[2][0], c[2][1], c[2][2]);
-    doc.text(c[1], x + 10, stripY + 36);
-  });
-
-  /* ---------- activity tables (overdue, in-progress / planned, completed) ---------- */
-  const overdue = tasks
-    .filter(t => effectiveStatus(t, simMs) === 'OVERDUE')
-    .sort((a, b) => a.endMs - b.endMs);
-  const upcoming = tasks
-    .filter(t => { const st = effectiveStatus(t, simMs); return st === 'IN_PROGRESS' || st === 'PENDING'; })
-    .sort((a, b) => a.endMs - b.endMs);
-  const completed = tasks
-    .filter(t => effectiveStatus(t, simMs) === 'COMPLETED')
-    .sort((a, b) => a.endMs - b.endMs);
-
-  function sectionHeading(label: string, count: number, y: number, accent: [number, number, number]): number {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    const text = `${label}  ·  ${count}`;
-    const tw = doc.getTextWidth(text);
-    const h = 20, padX = 11;
-    glassRect(margin, y, tw + padX * 2, h, 10, accent, 0.92, [255, 255, 255], 0.5);
-    doc.saveGraphicsState();
-    (doc as any).setGState(new (doc as any).GState({ opacity: 1 }));
-    doc.setTextColor(255, 255, 255);
-    doc.text(text, margin + padX, y + h / 2 + 3.3);
-    doc.restoreGraphicsState();
-    return h;
-  }
-
-  const tableW = pageW - margin * 2;
-  const colW = {
-    sn: 24,
-    wp: 104,
-    act: 300,
-    lead: 56,
-    support: 112,
-    dl: 60,
-    days: 50
-  };
-  const used = Object.values(colW).reduce((a, b) => a + b, 0);
-  colW.act += tableW - used - 16; // absorb the remainder so the table exactly fills the page
-
-  function renderSection(
-    label: string, rows: WBSTask[], y: number,
-    accent: [number, number, number], emptyMsg: string
-  ): number {
-    if (y > pageH - 130) { doc.addPage(); y = headerH + 14; }
-    const hh = sectionHeading(label, rows.length, y, accent);
-    let ty = y + hh + 7;
-
-    if (!rows.length) {
-      glassRect(margin, ty, tableW, 26, 9, [255, 255, 255], 0.88, [255, 255, 255], 0.55);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
+    const stripY = headerH + 12;
+    const stripH = 46;
+    const cells: [string, string, [number, number, number]][] = [
+      ['Overall progress', `${pct}%`, blue],
+      ['Completed', String(counts.completed), [16, 185, 129]],
+      ['In progress', String(counts.inProgress), hexToRgb(PALETTE.blue)],
+      ['Overdue', String(counts.overdue), hexToRgb(PALETTE.rose)],
+      ['Pending', String(counts.pending), hexToRgb(PALETTE.slate)],
+      ['Days to COP', String(daysToCop), ink]
+    ];
+    const cellW = (pageW - margin * 2 - 5 * 7) / 6;
+    cells.forEach((c, i) => {
+      const x = margin + i * (cellW + 7);
+      glassRect(x, stripY, cellW, stripH, 9, [255, 255, 255], 0.86, [255, 255, 255], 0.6);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.6);
       doc.setTextColor(100, 116, 139);
-      doc.text(emptyMsg, margin + 12, ty + 17);
-      return ty + 26 + 14;
+      doc.text(c[0].toUpperCase(), x + 10, stripY + 15);
+      doc.setFontSize(17);
+      doc.setTextColor(c[2][0], c[2][1], c[2][2]);
+      doc.text(c[1], x + 10, stripY + 36);
+    });
+
+    /* ---------- activity tables (completed, overdue, in-progress / planned) ---------- */
+    const completed = tasks
+      .filter(t => effectiveStatus(t, simMs) === 'COMPLETED')
+      .sort((a, b) => a.endMs - b.endMs);
+    const overdue = tasks
+      .filter(t => effectiveStatus(t, simMs) === 'OVERDUE')
+      .sort((a, b) => a.endMs - b.endMs);
+    const upcoming = tasks
+      .filter(t => { const st = effectiveStatus(t, simMs); return st === 'IN_PROGRESS' || st === 'PENDING'; })
+      .sort((a, b) => a.endMs - b.endMs);
+
+    function sectionHeading(label: string, count: number, y: number, accent: [number, number, number]): number {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      const text = `${label}  ·  ${count}`;
+      const tw = doc.getTextWidth(text);
+      const h = 20, padX = 11;
+      glassRect(margin, y, tw + padX * 2, h, 10, accent, 0.92, [255, 255, 255], 0.5);
+      doc.saveGraphicsState();
+      (doc as any).setGState(new (doc as any).GState({ opacity: 1 }));
+      doc.setTextColor(255, 255, 255);
+      doc.text(text, margin + padX, y + h / 2 + 3.3);
+      doc.restoreGraphicsState();
+      return h;
     }
 
-    inTableSection = true;
-    autoTable(doc, {
-      startY: ty,
-      margin: { left: margin, right: margin, top: headerH + 14, bottom: margin },
-      head: [['#', 'Work Package', 'Activity', 'Lead', 'Supporting Team', 'Deadline', 'Status / Days']],
-      body: rows.map((t, i) => {
-        const d = Math.round((t.endMs - simMs) / 86400000);
-        const st = effectiveStatus(t, simMs);
-        let statusStr = '';
-        if (st === 'COMPLETED') {
-          statusStr = 'Done ✓';
-        } else if (d < 0) {
-          statusStr = `${-d} late`;
-        } else if (d === 0) {
-          statusStr = 'today';
-        } else {
-          statusStr = `${d}d left`;
-        }
-        return [
-          String(i + 1),
-          t.wp,
-          t.activity,
-          t.lead || '—',
-          t.support || 'None',
-          formatDate(t.deadline),
-          statusStr
-        ];
-      }),
-      theme: 'grid',
-      styles: {
-        font: 'helvetica',
-        fontSize: 7.6,
-        cellPadding: { top: 3.5, right: 4, bottom: 3.5, left: 4 },
-        lineColor: [226, 232, 240],
-        lineWidth: 0.3,
-        textColor: [30, 41, 59],
-        overflow: 'linebreak',
-        valign: 'middle'
-      },
-      headStyles: {
-        fillColor: [15, 23, 42],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 7.4,
-        cellPadding: { top: 4, right: 4, bottom: 4, left: 4 }
-      },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      bodyStyles: { fillColor: [255, 255, 255] },
-      columnStyles: {
-        0: { cellWidth: colW.sn, halign: 'right', textColor: [148, 163, 184] },
-        1: { cellWidth: colW.wp, fontSize: 7 },
-        2: { cellWidth: colW.act, fontStyle: 'bold' },
-        3: { cellWidth: colW.lead },
-        4: { cellWidth: colW.support, fontSize: 7, textColor: [100, 116, 139] },
-        5: { cellWidth: colW.dl, halign: 'center' },
-        6: { cellWidth: colW.days, halign: 'center', fontStyle: 'bold' }
-      },
-      // colour-code the work package cell and the urgency/completion column
-      didParseCell: (data: any) => {
-        if (data.section !== 'body') return;
-        const t = rows[data.row.index];
-        const st = effectiveStatus(t, simMs);
-        if (data.column.index === 1) {
-          const [r, g, b] = hexToRgb(wpHex(t.wp));
-          data.cell.styles.textColor = [r, g, b];
-          data.cell.styles.fontStyle = 'bold';
-        }
-        if (data.column.index === 2 && st === 'COMPLETED') {
-          data.cell.styles.textColor = [71, 85, 105];
-        }
-        if (data.column.index === 6) {
+    const tableW = pageW - margin * 2;
+    const colW = {
+      sn: 24,
+      wp: 104,
+      act: 300,
+      lead: 56,
+      support: 112,
+      dl: 60,
+      days: 50
+    };
+    const used = Object.values(colW).reduce((a, b) => a + b, 0);
+    colW.act += tableW - used - 16; // absorb the remainder so the table exactly fills the page
+
+    function renderSection(
+      label: string, rows: WBSTask[], y: number,
+      accent: [number, number, number], emptyMsg: string
+    ): number {
+      if (y > pageH - 130) { doc.addPage(); y = headerH + 14; }
+      const hh = sectionHeading(label, rows.length, y, accent);
+      let ty = y + hh + 7;
+
+      if (!rows.length) {
+        glassRect(margin, ty, tableW, 26, 9, [255, 255, 255], 0.88, [255, 255, 255], 0.55);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(emptyMsg, margin + 12, ty + 17);
+        return ty + 26 + 14;
+      }
+
+      inTableSection = true;
+      autoTable(doc, {
+        startY: ty,
+        margin: { left: margin, right: margin, top: headerH + 14, bottom: margin },
+        head: [['#', 'Work Package', 'Activity', 'Lead', 'Supporting Team', 'Deadline', 'Status / Days']],
+        body: rows.map((t, i) => {
+          const d = Math.round((t.endMs - simMs) / 86400000);
+          const st = effectiveStatus(t, simMs);
+          let statusStr = '';
           if (st === 'COMPLETED') {
-            data.cell.styles.textColor = [16, 185, 129];
+            statusStr = 'Done ✓';
+          } else if (d < 0) {
+            statusStr = `${-d} late`;
+          } else if (d === 0) {
+            statusStr = 'today';
           } else {
-            const d = Math.round((t.endMs - simMs) / 86400000);
-            data.cell.styles.textColor = d < 0
-              ? hexToRgb(PALETTE.rose)
-              : d <= 7 ? hexToRgb(PALETTE.amber) : [100, 116, 139];
+            statusStr = `${d}d left`;
+          }
+          return [
+            String(i + 1),
+            t.wp,
+            t.activity,
+            t.lead || '—',
+            t.support || 'None',
+            formatDate(t.deadline),
+            statusStr
+          ];
+        }),
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 7.6,
+          cellPadding: { top: 3.5, right: 4, bottom: 3.5, left: 4 },
+          lineColor: [226, 232, 240],
+          lineWidth: 0.3,
+          textColor: [30, 41, 59],
+          overflow: 'linebreak',
+          valign: 'middle'
+        },
+        headStyles: {
+          fillColor: [15, 23, 42],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 7.4,
+          cellPadding: { top: 4, right: 4, bottom: 4, left: 4 }
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        bodyStyles: { fillColor: [255, 255, 255] },
+        columnStyles: {
+          0: { cellWidth: colW.sn, halign: 'right', textColor: [148, 163, 184] },
+          1: { cellWidth: colW.wp, fontSize: 7 },
+          2: { cellWidth: colW.act, fontStyle: 'bold' },
+          3: { cellWidth: colW.lead },
+          4: { cellWidth: colW.support, fontSize: 7, textColor: [100, 116, 139] },
+          5: { cellWidth: colW.dl, halign: 'center' },
+          6: { cellWidth: colW.days, halign: 'center', fontStyle: 'bold' }
+        },
+        // colour-code the work package cell and the urgency/completion column
+        didParseCell: (data: any) => {
+          if (data.section !== 'body') return;
+          const t = rows[data.row.index];
+          const st = effectiveStatus(t, simMs);
+          if (data.column.index === 1) {
+            const [r, g, b] = hexToRgb(wpHex(t.wp));
+            data.cell.styles.textColor = [r, g, b];
+            data.cell.styles.fontStyle = 'bold';
+          }
+          if (data.column.index === 2 && st === 'COMPLETED') {
+            data.cell.styles.textColor = [71, 85, 105];
+          }
+          if (data.column.index === 6) {
+            if (st === 'COMPLETED') {
+              data.cell.styles.textColor = [16, 185, 129];
+            } else {
+              const d = Math.round((t.endMs - simMs) / 86400000);
+              data.cell.styles.textColor = d < 0
+                ? hexToRgb(PALETTE.rose)
+                : d <= 7 ? hexToRgb(PALETTE.amber) : [100, 116, 139];
+            }
           }
         }
-      }
-    });
-    inTableSection = false;
+      });
+      inTableSection = false;
 
-    return (doc as any).lastAutoTable.finalY + 16;
+      return (doc as any).lastAutoTable.finalY + 16;
+    }
+
+    let y = stripY + stripH + 14;
+    y = renderSection('COMPLETED ACTIVITIES', completed, y, [16, 185, 129], 'No completed activities in this selection.');
+    y = renderSection('OVERDUE — IMMEDIATE ACTION', overdue, y, hexToRgb(PALETTE.rose), 'No overdue activities in this selection.');
+    y = renderSection('IN PROGRESS & PLANNED ACTIVITIES', upcoming, y, hexToRgb(PALETTE.blue), 'No in-progress or planned activities in this selection.');
   }
-
-  let y = stripY + stripH + 14;
-  y = renderSection('OVERDUE — IMMEDIATE ACTION', overdue, y, hexToRgb(PALETTE.rose), 'No overdue activities in this selection.');
-  y = renderSection('IN PROGRESS & PLANNED ACTIVITIES', upcoming, y, hexToRgb(PALETTE.blue), 'No in-progress or planned activities in this selection.');
-  y = renderSection('COMPLETED ACTIVITIES', completed, y, [16, 185, 129], 'No completed activities in this selection.');
 
   /* ============================================================
      Compressed Gantt — grouped by work package
      ============================================================ */
-  const ganttTasks = [...tasks].sort((a, b) => a.startMs - b.startMs);
+  if (exportSection === 'gantt' || exportSection === 'all') {
+    const ganttTasks = [...tasks].sort((a, b) => a.startMs - b.startMs);
   if (ganttTasks.length) {
     pageKicker = 'PROGRAMME GANTT';
 
@@ -873,7 +877,11 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
 
     /* ---- render ---- */
     pages.forEach((page, pageIdx) => {
-      doc.addPage(); // chrome is painted by the addPage subscriber
+      if (exportSection === 'gantt' && pageIdx === 0) {
+        // Page 1 is already ready for Gantt
+      } else {
+        doc.addPage();
+      }
 
       const contentH = page.reduce((a, it) => a + (it.kind === 'band' ? bandH : rowH), 0);
       const cardH = axisH + 3 + contentH + legendH + 8;
@@ -1044,6 +1052,8 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
   }
 
 
+  } // end of if (exportSection === 'gantt' || exportSection === 'all')
+
   /* ---------- page numbers ---------- */
   const total = doc.getNumberOfPages();
   for (let i = 1; i <= total; i++) {
@@ -1057,7 +1067,14 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
     );
   }
 
-  doc.save(`Radi_Energy_Solutions_Action_Matrix_${todayStamp()}.pdf`);
+  const filePrefix = 
+    exportSection === 'matrix'
+      ? 'Radi_Energy_Solutions_Action_Matrix'
+      : exportSection === 'gantt'
+        ? 'Radi_Energy_Solutions_Programme_Gantt'
+        : 'Radi_Energy_Solutions_Master_WorkPlan';
+
+  doc.save(`${filePrefix}_${todayStamp()}.pdf`);
 }
 
 /* Re-exported so App can build the filter summary without importing stats twice. */

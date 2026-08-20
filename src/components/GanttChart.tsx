@@ -209,7 +209,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             <div className="w-6 sm:w-8 text-center shrink-0">Done</div>
             <div className="flex-1 px-1 sm:px-2 truncate">Task Details</div>
             <div className="hidden sm:block w-20 text-right pr-2 shrink-0">Deadline</div>
-            <div className="hidden sm:block w-12 text-center shrink-0">Action</div>
+            <div className="w-14 sm:w-16 text-center shrink-0">Action</div>
           </div>
 
           {/* List Content */}
@@ -433,18 +433,28 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="hidden sm:flex w-12 shrink-0 items-center justify-center gap-1 opacity-80 group-hover:opacity-100">
+      <div className="flex w-14 sm:w-16 shrink-0 items-center justify-center gap-1 opacity-90 sm:opacity-75 group-hover:opacity-100">
         <button
-          onClick={() => onEdit(task)}
-          className="p-1 hover:bg-slate-200 rounded text-slate-600 hover:text-slate-900 transition-colors"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(task);
+          }}
+          className="p-1.5 hover:bg-slate-200 text-slate-500 hover:text-slate-900 rounded transition-colors"
           title="Edit WBS Task"
+          aria-label="Edit Task"
         >
           <Edit3 className="w-3.5 h-3.5" />
         </button>
         <button
-          onClick={() => onDelete(task)}
-          className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(task);
+          }}
+          className="p-1.5 hover:bg-rose-100 text-slate-400 hover:text-rose-600 rounded transition-colors"
           title="Delete Task"
+          aria-label="Delete Task"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
