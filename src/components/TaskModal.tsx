@@ -161,11 +161,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={(e) => setLead(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               >
-                {TEAM_MEMBERS.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.name} ({m.role.split('/')[0]})
-                  </option>
-                ))}
+                <optgroup label="Primary Project Leads (3)">
+                  <option value="Shibah">Shibah (Lead Engineer / Project Lead)</option>
+                  <option value="Morgan">Morgan (Business & Financial Strategy)</option>
+                  <option value="Owen">Owen (HSE & ESG Lead)</option>
+                </optgroup>
+                <optgroup label="Supporting Officers">
+                  <option value="Elizabeth">Elizabeth (Financial Modeling)</option>
+                  <option value="Karen">Karen (Competitive Intelligence)</option>
+                  <option value="Gabriel">Gabriel (Digital Architecture)</option>
+                  <option value="Donald">Donald (Legal & Corporate Formation)</option>
+                  <option value="Druscilar">Druscilar (Market Research)</option>
+                  <option value="Malik">Malik (Geopolitical & Sourcing)</option>
+                  <option value="Mukama">Mukama (Technical Analyst)</option>
+                  <option value="Renorah">Renorah (Plant Layout)</option>
+                  <option value="Rodney">Rodney (Process Flow)</option>
+                  <option value="Entire Project Team">Entire Project Team</option>
+                </optgroup>
               </select>
             </div>
 

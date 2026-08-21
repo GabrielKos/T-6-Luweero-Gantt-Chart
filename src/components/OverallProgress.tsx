@@ -18,7 +18,8 @@ import {
   ImageDown,
   FileDown,
   CalendarClock,
-  Users
+  Users,
+  UserCheck
 } from 'lucide-react';
 
 interface OverallProgressProps {
@@ -349,33 +350,35 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
         </div>
 
         {/* ---------- Deadline load + officer load ---------- */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-3">
 
           {/* Monthly deadline load */}
-          <div className="rounded-2xl border border-white/60 bg-white/85 backdrop-blur-md shadow-md p-5">
-            <h3 className="text-[10.5px] uppercase tracking-[0.1em] text-slate-500 font-bold mb-4">
-              Deadline load by month
-            </h3>
-            <div className="flex items-end gap-1.5 h-[130px]">
-              {s.months.map((m, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
-                  <span className="text-[9.5px] font-bold text-slate-600 mono">{m.total || ''}</span>
-                  <div
-                    className="w-full flex flex-col-reverse rounded-t overflow-hidden bg-slate-100"
-                    style={{ height: `${(m.total / maxMonth) * 100}%`, minHeight: m.total ? 4 : 2 }}
-                  >
+          <div className="rounded-2xl border border-white/60 bg-white/85 backdrop-blur-md shadow-md p-5 flex flex-col justify-between">
+            <div>
+              <h3 className="text-[10.5px] uppercase tracking-[0.1em] text-slate-500 font-bold mb-4">
+                Deadline load by month
+              </h3>
+              <div className="flex items-end gap-1.5 h-[130px]">
+                {s.months.map((m, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
+                    <span className="text-[9.5px] font-bold text-slate-600 mono">{m.total || ''}</span>
                     <div
-                      className="w-full bg-emerald-500"
-                      style={{ height: `${m.total ? (m.completed / m.total) * 100 : 0}%` }}
-                    />
-                    <div
-                      className="w-full bg-rose-500"
-                      style={{ height: `${m.total ? (m.overdue / m.total) * 100 : 0}%` }}
-                    />
+                      className="w-full flex flex-col-reverse rounded-t overflow-hidden bg-slate-100"
+                      style={{ height: `${(m.total / maxMonth) * 100}%`, minHeight: m.total ? 4 : 2 }}
+                    >
+                      <div
+                        className="w-full bg-emerald-500"
+                        style={{ height: `${m.total ? (m.completed / m.total) * 100 : 0}%` }}
+                      />
+                      <div
+                        className="w-full bg-rose-500"
+                        style={{ height: `${m.total ? (m.overdue / m.total) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-[9.5px] text-slate-500 font-semibold">{m.label}</span>
                   </div>
-                  <span className="text-[9.5px] text-slate-500 font-semibold">{m.label}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
             <div className="flex gap-4 mt-3 pt-3 border-t border-slate-200 text-[10px] text-slate-500">
               <span className="flex items-center gap-1.5">
@@ -390,31 +393,121 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
             </div>
           </div>
 
-          {/* Lead officer load */}
-          <div className="rounded-2xl border border-white/60 bg-white/85 backdrop-blur-md shadow-md p-5">
-            <h3 className="text-[10.5px] uppercase tracking-[0.1em] text-slate-500 font-bold mb-4 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-slate-400" />
-              Load by lead officer
-            </h3>
-            <div className="space-y-2.5">
-              {s.officers.map(o => (
-                <div key={o.name} className="grid grid-cols-[76px_1fr_54px] items-center gap-2.5">
-                  <span className="text-[11.5px] font-bold text-slate-700 truncate">{o.name}</span>
-                  <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden flex">
-                    <div
-                      className="bg-blue-600"
-                      style={{ width: `${(o.completed / o.total) * 100}%` }}
-                    />
-                    <div
-                      className="bg-rose-500"
-                      style={{ width: `${(o.overdue / o.total) * 100}%` }}
-                    />
+          {/* Officers Workload Breakdown (Split into Lead Officers and Supporting Officers) */}
+          <div className="rounded-2xl border border-white/60 bg-white/85 backdrop-blur-md shadow-md p-5 flex flex-col gap-4">
+            {/* Section 1: 3 Primary Project Leaders */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-[10.5px] uppercase tracking-[0.1em] text-slate-700 font-extrabold flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-600" />
+                  Load by Lead Officer
+                </h3>
+                <span className="text-[9.5px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                  3 Project Leads
+                </span>
+              </div>
+              <div className="space-y-2">
+                {s.leadOfficers.map(o => {
+                  const isHighLoad = o.total >= 25;
+                  return (
+                    <div key={o.name} className="grid grid-cols-[72px_1fr_60px] items-center gap-2">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-[11.5px] font-bold text-slate-800 truncate">{o.name}</span>
+                        {isHighLoad && (
+                          <span className="text-[8px] bg-amber-100 text-amber-800 font-bold px-1 rounded uppercase shrink-0" title="Heavy Lead Workload">
+                            Peak
+                          </span>
+                        )}
+                      </div>
+                      <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden flex">
+                        <div
+                          className="bg-blue-600"
+                          style={{ width: `${o.total ? (o.completed / o.total) * 100 : 0}%` }}
+                          title={`${o.completed} completed`}
+                        />
+                        <div
+                          className="bg-blue-400 opacity-60"
+                          style={{ width: `${o.total ? (o.inProgress / o.total) * 100 : 0}%` }}
+                          title={`${o.inProgress} in progress`}
+                        />
+                        <div
+                          className="bg-rose-500"
+                          style={{ width: `${o.total ? (o.overdue / o.total) * 100 : 0}%` }}
+                          title={`${o.overdue} overdue`}
+                        />
+                      </div>
+                      <div className="text-right flex items-center justify-end gap-1">
+                        {o.overdue > 0 && (
+                          <span className="text-[9px] font-bold text-rose-600 mono">!{o.overdue}</span>
+                        )}
+                        <span className="text-[10.5px] font-semibold text-slate-600 mono tabular-nums">
+                          {o.completed}/{o.total}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-slate-200/80 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[10.5px] uppercase tracking-[0.1em] text-slate-600 font-bold flex items-center gap-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+                  Load by Supporting Officer
+                </h3>
+                <span className="text-[9.5px] text-slate-500 font-medium">
+                  {s.supportOfficers.length} Supporting Members
+                </span>
+              </div>
+              <div className="max-h-[160px] overflow-y-auto space-y-1.5 pr-1 -mr-1">
+                {s.supportOfficers.map(o => (
+                  <div key={o.name} className="grid grid-cols-[72px_1fr_60px] items-center gap-2">
+                    <span className="text-[11px] font-semibold text-slate-700 truncate" title={o.name}>
+                      {o.name}
+                    </span>
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden flex">
+                      <div
+                        className="bg-indigo-600"
+                        style={{ width: `${o.total ? (o.completed / o.total) * 100 : 0}%` }}
+                        title={`${o.completed} completed`}
+                      />
+                      <div
+                        className="bg-indigo-400 opacity-60"
+                        style={{ width: `${o.total ? (o.inProgress / o.total) * 100 : 0}%` }}
+                        title={`${o.inProgress} in progress`}
+                      />
+                      <div
+                        className="bg-rose-500"
+                        style={{ width: `${o.total ? (o.overdue / o.total) * 100 : 0}%` }}
+                        title={`${o.overdue} overdue`}
+                      />
+                    </div>
+                    <div className="text-right flex items-center justify-end gap-1">
+                      {o.overdue > 0 && (
+                        <span className="text-[8.5px] font-bold text-rose-600 mono">!{o.overdue}</span>
+                      )}
+                      <span className="text-[10px] text-slate-500 mono tabular-nums">
+                        {o.completed}/{o.total}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[10.5px] text-slate-500 mono text-right tabular-nums">
-                    {o.completed}/{o.total}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Micro Legend */}
+            <div className="flex items-center gap-3 pt-2 border-t border-slate-200/60 text-[9px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <i className="w-2 h-2 rounded-xs bg-blue-600 inline-block" /> Completed
+              </span>
+              <span className="flex items-center gap-1">
+                <i className="w-2 h-2 rounded-xs bg-rose-500 inline-block" /> Overdue
+              </span>
+              <span className="flex items-center gap-1">
+                <i className="w-2 h-2 rounded-xs bg-slate-200 inline-block" /> Outstanding
+              </span>
             </div>
           </div>
         </div>

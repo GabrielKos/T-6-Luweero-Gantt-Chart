@@ -184,29 +184,84 @@ export interface OfficerStat {
   name: string;
   total: number;
   completed: number;
+  inProgress: number;
+  pending: number;
   overdue: number;
   pct: number;
+  isLeader?: boolean;
+}
+
+export const CANONICAL_LEADERS = ['Shibah', 'Morgan', 'Owen'] as const;
+
+export const ALL_CANONICAL_OFFICERS = [
+  'Shibah',
+  'Morgan',
+  'Owen',
+  'Elizabeth',
+  'Karen',
+  'Gabriel',
+  'Donald',
+  'Druscilar',
+  'Malik',
+  'Mukama',
+  'Renorah',
+  'Rodney'
+] as const;
+
+export function leadOfficerStats(tasks: WBSTask[], simDateOrMs: string | number): OfficerStat[] {
+  return CANONICAL_LEADERS.map(name => {
+    const items = tasks.filter(t => t.lead?.toLowerCase().trim() === name.toLowerCase());
+    const c = countStatuses(items, simDateOrMs);
+    return {
+      name,
+      total: c.total,
+      completed: c.completed,
+      inProgress: c.inProgress,
+      pending: c.pending,
+      overdue: c.overdue,
+      pct: c.total ? Math.round((c.completed / c.total) * 100) : 0,
+      isLeader: true
+    };
+  }).sort((a, b) => b.total - a.total);
+}
+
+export function supportOfficerStats(tasks: WBSTask[], simDateOrMs: string | number): OfficerStat[] {
+  // Extract all supporting officers from list + canonical supporting team
+  const canonicalSupporting = ALL_CANONICAL_OFFICERS.filter(name => !CANONICAL_LEADERS.includes(name as any));
+  const dynamicSupporting = new Set<string>(canonicalSupporting);
+
+  tasks.forEach(t => {
+    if (t.support) {
+      t.support.split(',').forEach(s => {
+        const clean = s.trim();
+        if (clean && clean.toLowerCase() !== 'none' && clean.toLowerCase() !== 'all members' && clean.toLowerCase() !== 'all' && !CANONICAL_LEADERS.includes(clean as any)) {
+          dynamicSupporting.add(clean);
+        }
+      });
+    }
+  });
+
+  return Array.from(dynamicSupporting).map(name => {
+    const items = tasks.filter(t => {
+      if (!t.support) return false;
+      return t.support.toLowerCase().includes(name.toLowerCase());
+    });
+    const c = countStatuses(items, simDateOrMs);
+    return {
+      name,
+      total: c.total,
+      completed: c.completed,
+      inProgress: c.inProgress,
+      pending: c.pending,
+      overdue: c.overdue,
+      pct: c.total ? Math.round((c.completed / c.total) * 100) : 0,
+      isLeader: false
+    };
+  }).sort((a, b) => b.total - a.total);
 }
 
 export function officerStats(tasks: WBSTask[], simDateOrMs: string | number): OfficerStat[] {
-  const groups = new Map<string, WBSTask[]>();
-  tasks.forEach(t => {
-    const key = t.lead || 'Unassigned';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(t);
-  });
-  return Array.from(groups.entries())
-    .map(([name, items]) => {
-      const c = countStatuses(items, simDateOrMs);
-      return {
-        name,
-        total: c.total,
-        completed: c.completed,
-        overdue: c.overdue,
-        pct: c.total ? Math.round((c.completed / c.total) * 100) : 0
-      };
-    })
-    .sort((a, b) => b.total - a.total);
+  return leadOfficerStats(tasks, simDateOrMs);
 }
 
 /** Tasks that are overdue, or fall due within `windowDays`, most urgent first. */
@@ -253,6 +308,8 @@ export interface ProgressSummary {
   elapsedPct: number;
   packages: PackageStat[];
   officers: OfficerStat[];
+  leadOfficers: OfficerStat[];
+  supportOfficers: OfficerStat[];
   attention: WBSTask[];
   months: ReturnType<typeof monthlyLoad>;
 }
@@ -262,6 +319,8 @@ export function buildSummary(tasks: WBSTask[], simulationDate: string): Progress
   const counts = countStatuses(tasks, simulationDate);
   const totalSpan = dayMs(PROGRAMME_END) - dayMs(PROGRAMME_START);
   const elapsed = simMs - dayMs(PROGRAMME_START);
+  const leadStats = leadOfficerStats(tasks, simulationDate);
+  const supportStats = supportOfficerStats(tasks, simulationDate);
 
   return {
     counts,
@@ -269,7 +328,9 @@ export function buildSummary(tasks: WBSTask[], simulationDate: string): Progress
     daysToCop: daysBetween(simulationDate, COP_TARGET),
     elapsedPct: Math.max(0, Math.min(100, Math.round((elapsed / totalSpan) * 100))),
     packages: packageStats(tasks, simulationDate),
-    officers: officerStats(tasks, simulationDate),
+    officers: leadStats,
+    leadOfficers: leadStats,
+    supportOfficers: supportStats,
     attention: attentionTasks(tasks, simulationDate),
     months: monthlyLoad(tasks, simulationDate)
   };

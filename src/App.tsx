@@ -149,12 +149,27 @@ export default function App() {
   }, [tasks]);
 
   const supportingMembers = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>([
+      'Elizabeth',
+      'Karen',
+      'Gabriel',
+      'Donald',
+      'Druscilar',
+      'Malik',
+      'Mukama',
+      'Renorah',
+      'Rodney',
+      'Morgan',
+      'Owen',
+      'Shibah'
+    ]);
     tasks.forEach(t => {
       if (t.support) {
         t.support.split(',').forEach(s => {
           const trimmed = s.trim();
-          if (trimmed) set.add(trimmed);
+          if (trimmed && trimmed.toLowerCase() !== 'none' && trimmed.toLowerCase() !== 'all members') {
+            set.add(trimmed);
+          }
         });
       }
     });

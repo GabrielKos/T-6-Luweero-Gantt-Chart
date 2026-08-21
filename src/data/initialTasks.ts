@@ -294,17 +294,19 @@ export function generateSeedTasks(): WBSTask[] {
 }
 
 export const TEAM_MEMBERS = [
-  { name: "Shibah", role: "Lead Engineer / Project Lead", email: "shibah@radienergy.com" },
-  { name: "Morgan", role: "Business & Financial Strategy Lead", email: "morgan@radienergy.com" },
-  { name: "Owen", role: "HSE & ESG Officer", email: "owen@radienergy.com" },
-  { name: "Donald", lead: "Legal & Corporate Formation Lead", role: "Legal & Corporate Formation Lead", email: "donald@radienergy.com" },
-  { name: "Gabriel", role: "Digital Architecture & Tech Officer", email: "gabriel@radienergy.com" },
-  { name: "Elizabeth", role: "Financial Modeling Officer", email: "elizabeth@radienergy.com" },
-  { name: "Druscilar", role: "Market Research Specialist", email: "druscilar@radienergy.com" },
-  { name: "Malik", role: "Geopolitical & Sourcing Specialist", email: "malik@radienergy.com" },
-  { name: "Karen", role: "Competitive Intelligence Officer", email: "karen@radienergy.com" },
-  { name: "Mukama", role: "Technical Analyst", email: "mukama@radienergy.com" },
-  { name: "Renorah", role: "Plant Layout Specialist", email: "renorah@radienergy.com" },
-  { name: "Rodney", role: "Process Flow Engineer", email: "rodney@radienergy.com" },
-  { name: "Entire Project Team", role: "All Team Members", email: "team@radienergy.com" }
+  // 3 Primary Project Leaders
+  { name: "Shibah", role: "Lead Engineer / Project Lead", email: "shibah@radienergy.com", isLeader: true },
+  { name: "Morgan", role: "Business & Financial Strategy Lead", email: "morgan@radienergy.com", isLeader: true },
+  { name: "Owen", role: "HSE & ESG Lead", email: "owen@radienergy.com", isLeader: true },
+  // Supporting Officers
+  { name: "Elizabeth", role: "Financial Modeling Officer", email: "elizabeth@radienergy.com", isLeader: false },
+  { name: "Karen", role: "Competitive Intelligence Officer", email: "karen@radienergy.com", isLeader: false },
+  { name: "Gabriel", role: "Digital Architecture & Tech Officer", email: "gabriel@radienergy.com", isLeader: false },
+  { name: "Donald", role: "Legal & Corporate Formation Officer", email: "donald@radienergy.com", isLeader: false },
+  { name: "Druscilar", role: "Market Research Specialist", email: "druscilar@radienergy.com", isLeader: false },
+  { name: "Malik", role: "Geopolitical & Sourcing Specialist", email: "malik@radienergy.com", isLeader: false },
+  { name: "Mukama", role: "Technical Analyst", email: "mukama@radienergy.com", isLeader: false },
+  { name: "Renorah", role: "Plant Layout Specialist", email: "renorah@radienergy.com", isLeader: false },
+  { name: "Rodney", role: "Process Flow Engineer", email: "rodney@radienergy.com", isLeader: false },
+  { name: "Entire Project Team", role: "All Team Members", email: "team@radienergy.com", isLeader: false }
 ];
