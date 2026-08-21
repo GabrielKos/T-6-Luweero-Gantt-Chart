@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { WBSTask } from '../types';
-import { Undo2, X, Trash2, CheckCircle2 } from 'lucide-react';
+import { Undo2, X, Trash2 } from 'lucide-react';
 
 interface UndoToastProps {
   deletedTask: WBSTask | null;
@@ -13,30 +13,34 @@ export const UndoToast: React.FC<UndoToastProps> = ({
   deletedTask,
   onUndo,
   onDismiss,
-  durationMs = 10000
+  durationMs = 6000
 }) => {
   const [progress, setProgress] = useState(100);
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
 
   useEffect(() => {
     if (!deletedTask) return;
 
     setProgress(100);
-    const intervalTime = 100;
-    const step = (intervalTime / durationMs) * 100;
+    const startTime = Date.now();
+    const intervalTime = 50;
 
     const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev <= step) {
-          clearInterval(interval);
-          onDismiss();
-          return 0;
-        }
-        return prev - step;
-      });
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, durationMs - elapsed);
+      const pct = (remaining / durationMs) * 100;
+      
+      setProgress(pct);
+
+      if (elapsed >= durationMs) {
+        clearInterval(interval);
+        onDismissRef.current();
+      }
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [deletedTask, durationMs, onDismiss]);
+  }, [deletedTask?.id, durationMs]);
 
   if (!deletedTask) return null;
 
@@ -45,7 +49,7 @@ export const UndoToast: React.FC<UndoToastProps> = ({
       <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden p-4 relative">
         {/* Progress Bar */}
         <div 
-          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-400 to-emerald-400 transition-all duration-100 ease-linear"
+          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-400 to-emerald-400 transition-all duration-75 ease-linear"
           style={{ width: `${progress}%` }}
         />
 

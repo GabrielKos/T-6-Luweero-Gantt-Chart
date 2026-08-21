@@ -163,11 +163,10 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
     const missingInMem: WBSTask[] = [];
 
     for (const seed of canonicalSeedList) {
-      const seedNorm = normalizeString(seed.activity);
-
       const exists = rawTaskList.some((rt) => {
         if (rt.id === seed.id) return true;
-        return normalizeString(rt.activity) === seedNorm;
+        // Check if matching duplicate task within the same month and same work package
+        return areTasksOverlapping(rt, seed);
       });
 
       if (!exists) {

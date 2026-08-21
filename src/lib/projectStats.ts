@@ -74,12 +74,36 @@ export function formatDate(dateString: string): string {
 }
 
 /**
+ * Checks whether a task is overdue relative to a given simulation date (YYYY-MM-DD)
+ */
+export function isTaskOverdue(task: WBSTask, simulationDate: string): boolean {
+  if (task.status === 'COMPLETED') return false;
+  if (!task.deadline) return false;
+  if (task.deadline < simulationDate) return true;
+  const simMs = dayMs(simulationDate);
+  return task.endMs < simMs;
+}
+
+/**
  * A task's status as it actually stands on the simulation date — a PENDING task
  * whose deadline has passed reads as OVERDUE everywhere in the UI, and an
  * uncompleted task already inside its window reads as IN_PROGRESS.
  */
-export function effectiveStatus(task: WBSTask, simMs: number): EffectiveStatus {
+export function effectiveStatus(task: WBSTask, simDateOrMs: string | number): EffectiveStatus {
   if (task.status === 'COMPLETED') return 'COMPLETED';
+
+  let simDate = '';
+  let simMs = 0;
+  if (typeof simDateOrMs === 'string') {
+    simDate = simDateOrMs;
+    simMs = dayMs(simDate);
+  } else {
+    simMs = simDateOrMs;
+    const d = new Date(simMs);
+    simDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  if (task.deadline && task.deadline < simDate) return 'OVERDUE';
   if (task.endMs < simMs) return 'OVERDUE';
   if (task.startMs <= simMs) return 'IN_PROGRESS';
   return 'PENDING';
@@ -93,10 +117,10 @@ export interface StatusCounts {
   overdue: number;
 }
 
-export function countStatuses(tasks: WBSTask[], simMs: number): StatusCounts {
+export function countStatuses(tasks: WBSTask[], simDateOrMs: string | number): StatusCounts {
   const counts: StatusCounts = { total: tasks.length, completed: 0, inProgress: 0, pending: 0, overdue: 0 };
   tasks.forEach(t => {
-    switch (effectiveStatus(t, simMs)) {
+    switch (effectiveStatus(t, simDateOrMs)) {
       case 'COMPLETED': counts.completed++; break;
       case 'OVERDUE': counts.overdue++; break;
       case 'IN_PROGRESS': counts.inProgress++; break;
@@ -122,7 +146,7 @@ export interface PackageStat extends StatusCounts {
  * Per-work-package roll-up, ordered by the package's earliest start so the
  * list reads chronologically rather than alphabetically.
  */
-export function packageStats(tasks: WBSTask[], simMs: number): PackageStat[] {
+export function packageStats(tasks: WBSTask[], simDateOrMs: string | number): PackageStat[] {
   const groups = new Map<string, WBSTask[]>();
   tasks.forEach(t => {
     const key = canonicalizeWorkPackage(t.wp || 'Unassigned');
@@ -134,7 +158,7 @@ export function packageStats(tasks: WBSTask[], simMs: number): PackageStat[] {
 
   return Array.from(groups.entries())
     .map(([wp, items]) => {
-      const counts = countStatuses(items, simMs);
+      const counts = countStatuses(items, simDateOrMs);
       const leadCounts = new Map<string, number>();
       items.forEach(t => {
         if (t.lead) leadCounts.set(t.lead, (leadCounts.get(t.lead) || 0) + 1);
@@ -164,7 +188,7 @@ export interface OfficerStat {
   pct: number;
 }
 
-export function officerStats(tasks: WBSTask[], simMs: number): OfficerStat[] {
+export function officerStats(tasks: WBSTask[], simDateOrMs: string | number): OfficerStat[] {
   const groups = new Map<string, WBSTask[]>();
   tasks.forEach(t => {
     const key = t.lead || 'Unassigned';
@@ -173,7 +197,7 @@ export function officerStats(tasks: WBSTask[], simMs: number): OfficerStat[] {
   });
   return Array.from(groups.entries())
     .map(([name, items]) => {
-      const c = countStatuses(items, simMs);
+      const c = countStatuses(items, simDateOrMs);
       return {
         name,
         total: c.total,
@@ -186,15 +210,18 @@ export function officerStats(tasks: WBSTask[], simMs: number): OfficerStat[] {
 }
 
 /** Tasks that are overdue, or fall due within `windowDays`, most urgent first. */
-export function attentionTasks(tasks: WBSTask[], simMs: number, windowDays = 14): WBSTask[] {
+export function attentionTasks(tasks: WBSTask[], simDateOrMs: string | number, windowDays = 14): WBSTask[] {
+  const simMs = typeof simDateOrMs === 'string' ? dayMs(simDateOrMs) : simDateOrMs;
+  const simDate = typeof simDateOrMs === 'string' ? simDateOrMs : `${new Date(simMs).toISOString().slice(0, 10)}`;
   const horizon = simMs + windowDays * 86400000;
+  
   return tasks
-    .filter(t => t.status !== 'COMPLETED' && t.endMs <= horizon)
+    .filter(t => t.status !== 'COMPLETED' && (isTaskOverdue(t, simDate) || t.endMs <= horizon))
     .sort((a, b) => a.endMs - b.endMs);
 }
 
 /** Month-by-month deadline load across the programme window. */
-export function monthlyLoad(tasks: WBSTask[], simMs: number) {
+export function monthlyLoad(tasks: WBSTask[], simDateOrMs: string | number) {
   const buckets = new Map<string, { label: string; total: number; completed: number; overdue: number }>();
   const start = new Date(`${PROGRAMME_START}T00:00:00`);
   for (let i = 0; i < 12; i++) {
@@ -212,7 +239,7 @@ export function monthlyLoad(tasks: WBSTask[], simMs: number) {
     const b = buckets.get(key);
     if (!b) return;
     b.total++;
-    const st = effectiveStatus(t, simMs);
+    const st = effectiveStatus(t, simDateOrMs);
     if (st === 'COMPLETED') b.completed++;
     else if (st === 'OVERDUE') b.overdue++;
   });
@@ -232,7 +259,7 @@ export interface ProgressSummary {
 
 export function buildSummary(tasks: WBSTask[], simulationDate: string): ProgressSummary {
   const simMs = dayMs(simulationDate);
-  const counts = countStatuses(tasks, simMs);
+  const counts = countStatuses(tasks, simulationDate);
   const totalSpan = dayMs(PROGRAMME_END) - dayMs(PROGRAMME_START);
   const elapsed = simMs - dayMs(PROGRAMME_START);
 
@@ -241,9 +268,9 @@ export function buildSummary(tasks: WBSTask[], simulationDate: string): Progress
     pct: counts.total ? Math.round((counts.completed / counts.total) * 100) : 0,
     daysToCop: daysBetween(simulationDate, COP_TARGET),
     elapsedPct: Math.max(0, Math.min(100, Math.round((elapsed / totalSpan) * 100))),
-    packages: packageStats(tasks, simMs),
-    officers: officerStats(tasks, simMs),
-    attention: attentionTasks(tasks, simMs),
-    months: monthlyLoad(tasks, simMs)
+    packages: packageStats(tasks, simulationDate),
+    officers: officerStats(tasks, simulationDate),
+    attention: attentionTasks(tasks, simulationDate),
+    months: monthlyLoad(tasks, simulationDate)
   };
 }

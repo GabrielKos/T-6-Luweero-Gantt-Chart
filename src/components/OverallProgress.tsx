@@ -27,6 +27,7 @@ interface OverallProgressProps {
   onExportPng: () => void;
   onExportPdf: () => void;
   isExporting: string | null;
+  onSelectStatus?: (status: string) => void;
 }
 
 /**
@@ -42,7 +43,8 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
   simulationDate,
   onExportPng,
   onExportPdf,
-  isExporting
+  isExporting,
+  onSelectStatus
 }) => {
   const s = useMemo(() => buildSummary(tasks, simulationDate), [tasks, simulationDate]);
 
@@ -188,21 +190,38 @@ export const OverallProgress: React.FC<OverallProgressProps> = ({
 
         {/* ---------- KPI tiles ---------- */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-          {kpis.map(k => (
-            <div
-              key={k.label}
-              className="relative rounded-xl border border-white/70 bg-white/85 backdrop-blur-md shadow-md p-4"
-            >
-              <span
-                className="absolute top-3.5 right-3.5 w-2.5 h-2.5 rounded-full ring-4 ring-white/60"
-                style={{ background: k.color }}
-              />
-              <k.Icon className="w-4 h-4 mb-2" style={{ color: k.color }} />
-              <div className="text-[9.5px] uppercase tracking-[0.1em] text-slate-500 font-bold">{k.label}</div>
-              <div className="text-3xl font-bold text-slate-900 leading-tight mt-0.5">{k.value}</div>
-              <div className="text-[10.5px] text-slate-500 mt-0.5">{k.sub}</div>
-            </div>
-          ))}
+          {kpis.map(k => {
+            const isClickable = !!onSelectStatus;
+            const statusKey = k.label === 'Overdue' ? 'OVERDUE'
+              : k.label === 'Completed' ? 'COMPLETED'
+              : k.label === 'In Progress' ? 'IN_PROGRESS'
+              : 'PENDING';
+
+            return (
+              <div
+                key={k.label}
+                onClick={() => {
+                  if (onSelectStatus) onSelectStatus(statusKey);
+                }}
+                className={`relative rounded-xl border border-white/70 bg-white/85 backdrop-blur-md shadow-md p-4 transition-all ${
+                  isClickable ? 'cursor-pointer hover:bg-white hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]' : ''
+                }`}
+                title={isClickable ? `Click to filter Gantt chart to ${k.label} tasks` : undefined}
+              >
+                <span
+                  className="absolute top-3.5 right-3.5 w-2.5 h-2.5 rounded-full ring-4 ring-white/60"
+                  style={{ background: k.color }}
+                />
+                <k.Icon className="w-4 h-4 mb-2" style={{ color: k.color }} />
+                <div className="text-[9.5px] uppercase tracking-[0.1em] text-slate-500 font-bold flex items-center justify-between">
+                  <span>{k.label}</span>
+                  {isClickable && <span className="text-[9px] text-blue-500 font-medium lowercase">view →</span>}
+                </div>
+                <div className="text-3xl font-bold text-slate-900 leading-tight mt-0.5">{k.value}</div>
+                <div className="text-[10.5px] text-slate-500 mt-0.5">{k.sub}</div>
+              </div>
+            );
+          })}
         </div>
 
         {/* ---------- Package progress + attention list ---------- */}

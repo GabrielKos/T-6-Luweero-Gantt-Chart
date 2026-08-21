@@ -4,7 +4,6 @@ import {
   SlidersHorizontal, 
   FolderOpen, 
   UserCheck, 
-  Users,
   Plus, 
   Share2,
   FileDown,
@@ -14,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 
 interface FilterBarProps {
@@ -28,6 +28,7 @@ interface FilterBarProps {
   onExportPng: () => void;
   onShareLink: () => void;
   isCopied: boolean;
+  overdueCount?: number;
   /** Which export is currently running ('pdf' | 'png' | null). */
   isExporting?: string | null;
   /** How many activities the PDF will contain, given the active filters. */
@@ -45,6 +46,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onExportPng,
   onShareLink,
   isCopied,
+  overdueCount = 0,
   isExporting = null,
   exportCount = 0
 }) => {
@@ -53,7 +55,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
   });
 
-  const isFiltered = filters.searchQuery || filters.lead !== 'ALL' || filters.support !== 'ALL' || filters.package !== 'ALL' || filters.isCriticalOnly;
+  const isOverdueActive = filters.status === 'OVERDUE' || filters.isCriticalOnly;
+  const isFiltered = filters.searchQuery || filters.lead !== 'ALL' || filters.support !== 'ALL' || filters.package !== 'ALL' || filters.status !== 'ALL' || filters.isCriticalOnly;
 
   return (
     <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-slate-900/85 via-slate-900/85 to-blue-950/85 border border-slate-800 m-1.5 sm:m-3 rounded-xl shadow-md relative text-white shrink-0">
@@ -65,7 +68,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-2 text-white hover:text-blue-300 font-bold text-xs sm:text-sm transition-colors py-1 px-1.5 rounded-lg hover:bg-slate-800/80"
+            className="flex items-center gap-2 text-white hover:text-blue-300 font-bold text-xs sm:text-sm transition-colors py-1 px-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer"
             title={isExpanded ? "Collapse Controls" : "Expand Controls"}
           >
             <SlidersHorizontal className="w-4 h-4 text-blue-400" />
@@ -77,10 +80,22 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             )}
           </button>
 
-          {!isExpanded && isFiltered && (
-            <span className="text-[10px] bg-blue-600/80 text-white font-semibold px-2 py-0.5 rounded-full">
-              Filtered
-            </span>
+          {isFiltered && !isOverdueActive && (
+            <button
+              onClick={() => onFilterChange({
+                lead: 'ALL',
+                support: 'ALL',
+                package: 'ALL',
+                status: 'ALL',
+                isCriticalOnly: false,
+                searchQuery: ''
+              })}
+              className="text-[10px] bg-blue-600/80 hover:bg-blue-500 text-white font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors cursor-pointer"
+              title="Click to reset all filters"
+            >
+              <Filter className="w-2.5 h-2.5" />
+              <span>Reset Filters</span>
+            </button>
           )}
         </div>
 
@@ -89,7 +104,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {/* Add Task Button */}
           <button
             onClick={onAddNewTask}
-            className="px-2.5 sm:px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-emerald-500"
+            className="px-2.5 sm:px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-emerald-500 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden xs:inline">Add Task</span>
@@ -98,7 +113,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {/* Shareable Link Button */}
           <button
             onClick={onShareLink}
-            className={`px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border ${
+            className={`px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border cursor-pointer ${
               isCopied
                 ? 'bg-emerald-600 border-emerald-500 text-white'
                 : 'bg-slate-800 hover:bg-slate-700/90 border-slate-700 text-slate-200'
@@ -113,7 +128,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             onClick={onExportPng}
             disabled={!!isExporting}
-            className="px-2.5 sm:px-3 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-slate-100 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-slate-700"
+            className="px-2.5 sm:px-3 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-slate-100 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-slate-700 cursor-pointer"
             title="Download a PNG of overall progress, days to COP and each work package"
           >
             {isExporting === 'png'
@@ -126,7 +141,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             onClick={onExport}
             disabled={!!isExporting}
-            className="px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-blue-500"
+            className="px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1 shadow-xs border border-blue-500 cursor-pointer"
             title={`Export the ${exportCount} filtered activities as a landscape PDF with a compressed Gantt`}
           >
             {isExporting === 'pdf'
@@ -153,7 +168,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <div className="flex bg-slate-800/90 rounded-lg p-0.5 border border-slate-700/80">
               <button
                 onClick={() => onFilterChange({ layout: 'timeline' })}
-                className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1 ${
+                className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   filters.layout === 'timeline' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-300 hover:text-white'
@@ -163,7 +178,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
               <button
                 onClick={() => onFilterChange({ layout: 'officer' })}
-                className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1 ${
+                className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   filters.layout === 'officer' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-300 hover:text-white'
@@ -242,26 +257,31 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </select>
           </div>
 
-          {/* Critical Only Toggle */}
+          {/* Status Filter */}
           <div>
             <label className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">
-              Urgency
+              Status Filter
             </label>
-            <button
-              onClick={() => onFilterChange({ isCriticalOnly: !filters.isCriticalOnly })}
-              className={`w-full text-xs font-semibold rounded-lg px-2 py-1 transition-all flex items-center justify-center gap-1 border ${
-                filters.isCriticalOnly
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 border-slate-700'
+            <select
+              value={filters.status || 'ALL'}
+              onChange={(e) => onFilterChange({ status: e.target.value })}
+              className={`w-full border text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none transition-colors cursor-pointer ${
+                filters.status === 'OVERDUE'
+                  ? 'bg-rose-950 border-rose-500 text-rose-200'
+                  : filters.status === 'COMPLETED'
+                  ? 'bg-emerald-950 border-emerald-500 text-emerald-200'
+                  : 'bg-slate-800/90 border-slate-700 text-slate-100 focus:border-blue-400'
               }`}
             >
-              <AlertTriangle className={`w-3 h-3 ${filters.isCriticalOnly ? 'text-white' : 'text-amber-400'}`} />
-              {filters.isCriticalOnly ? 'Critical Only' : 'All Tasks'}
-            </button>
+              <option value="ALL" className="bg-slate-900 text-slate-100">-- All Statuses --</option>
+              <option value="OVERDUE" className="bg-slate-900 text-rose-400 font-bold">⚠️ Overdue Tasks Only</option>
+              <option value="IN_PROGRESS" className="bg-slate-900 text-blue-300">⏳ In Progress</option>
+              <option value="PENDING" className="bg-slate-900 text-slate-300">📅 Pending / Upcoming</option>
+              <option value="COMPLETED" className="bg-slate-900 text-emerald-300">✓ Completed</option>
+            </select>
           </div>
         </div>
       )}
     </div>
   );
 };
-

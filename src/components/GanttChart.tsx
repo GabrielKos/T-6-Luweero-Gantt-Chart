@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { WBSTask, ViewOption } from '../types';
+import { isTaskOverdue } from '../lib/projectStats';
 import { 
   Check, 
   AlertTriangle, 
@@ -237,6 +238,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       task={task}
                       idx={idx}
                       simMs={simMs}
+                      simulationDate={simulationDate}
                       onToggleStatus={onToggleTaskStatus}
                       onEdit={onEditTask}
                       onDelete={onDeleteTask}
@@ -252,6 +254,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   task={task}
                   idx={idx}
                   simMs={simMs}
+                  simulationDate={simulationDate}
                   onToggleStatus={onToggleTaskStatus}
                   onEdit={onEditTask}
                   onDelete={onDeleteTask}
@@ -327,6 +330,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                             viewStartMs={viewStartMs}
                             totalMs={totalMs}
                             simMs={simMs}
+                            simulationDate={simulationDate}
                           />
                         ))}
                       </React.Fragment>
@@ -339,6 +343,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         viewStartMs={viewStartMs}
                         totalMs={totalMs}
                         simMs={simMs}
+                        simulationDate={simulationDate}
                       />
                     ))
                   )}
@@ -357,6 +362,7 @@ interface TaskRowItemProps {
   task: WBSTask;
   idx: number;
   simMs: number;
+  simulationDate: string;
   onToggleStatus: (id: string, current: WBSTask['status']) => void;
   onEdit: (task: WBSTask) => void;
   onDelete: (task: WBSTask) => void;
@@ -366,12 +372,13 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
   task,
   idx,
   simMs,
+  simulationDate,
   onToggleStatus,
   onEdit,
   onDelete
 }) => {
   const isCompleted = task.status === 'COMPLETED';
-  const isOverdue = !isCompleted && task.endMs < simMs;
+  const isOverdue = isTaskOverdue(task, simulationDate);
   const isOdd = idx % 2 !== 0;
 
   let rowBg = isOdd ? 'bg-slate-50/92' : 'bg-white/93';
@@ -443,7 +450,7 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
             e.stopPropagation();
             onEdit(task);
           }}
-          className="p-1.5 hover:bg-slate-200 text-slate-500 hover:text-slate-900 rounded transition-colors"
+          className="p-1.5 hover:bg-slate-200 text-slate-500 hover:text-slate-900 rounded transition-colors cursor-pointer"
           title="Edit WBS Task"
           aria-label="Edit Task"
         >
@@ -455,7 +462,7 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
             e.stopPropagation();
             onDelete(task);
           }}
-          className="p-1.5 hover:bg-rose-100 text-slate-400 hover:text-rose-600 rounded transition-colors"
+          className="p-1.5 hover:bg-rose-100 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
           title="Delete Task"
           aria-label="Delete Task"
         >
@@ -472,16 +479,18 @@ interface GanttBarItemProps {
   viewStartMs: number;
   totalMs: number;
   simMs: number;
+  simulationDate: string;
 }
 
 const GanttBarItem: React.FC<GanttBarItemProps> = ({
   task,
   viewStartMs,
   totalMs,
-  simMs
+  simMs,
+  simulationDate
 }) => {
   const isCompleted = task.status === 'COMPLETED';
-  const isOverdue = !isCompleted && task.endMs < simMs;
+  const isOverdue = isTaskOverdue(task, simulationDate);
 
   let leftPct = ((task.startMs - viewStartMs) / totalMs) * 100;
   let widthPct = ((task.endMs - task.startMs) / totalMs) * 100;

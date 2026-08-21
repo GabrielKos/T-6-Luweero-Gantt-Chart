@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserProfile, WBSTask } from '../types';
 import { RadiLogo } from './RadiLogo';
+import { isTaskOverdue } from '../lib/projectStats';
 import {
   Calendar,
   AlertTriangle,
@@ -23,14 +24,14 @@ interface HeaderProps {
   onOpenAuthModal: () => void;
   onOpenActivityLogs: () => void;
   syncStatus: 'synced' | 'syncing' | 'offline';
+  isOverdueFilterActive?: boolean;
+  onToggleOverdueFilter?: () => void;
 }
 
 /**
  * Single-row command bar.
  *
- * The previous header stacked a branding row above the filter bar and the month
- * tabs, eating roughly 120px before a single Gantt row was visible. Everything
- * now lives on one 52px line: brand, view switch, live date, KPI chips, team.
+ * Everything lives on one 52px line: brand, view switch, live date, KPI chips, team.
  */
 export const Header: React.FC<HeaderProps> = ({
   user,
@@ -43,12 +44,13 @@ export const Header: React.FC<HeaderProps> = ({
   onResetToLiveEAT,
   onOpenAuthModal,
   onOpenActivityLogs,
-  syncStatus
+  syncStatus,
+  isOverdueFilterActive = false,
+  onToggleOverdueFilter
 }) => {
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
-  const simMs = new Date(`${simulationDate}T00:00:00`).getTime();
-  const overdueTasks = tasks.filter(t => t.status !== 'COMPLETED' && t.endMs < simMs).length;
+  const overdueTasks = tasks.filter(t => isTaskOverdue(t, simulationDate)).length;
   const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const syncDot =
@@ -140,14 +142,28 @@ export const Header: React.FC<HeaderProps> = ({
             <ChevronRight className="w-3 h-3 text-slate-600 group-hover:text-blue-400 transition-colors" />
           </button>
 
-          {/* Overdue chip */}
+          {/* Overdue interactive toggle chip */}
           {overdueTasks > 0 && (
-            <div className="flex items-center gap-1.5 bg-rose-950/70 border border-rose-800 text-rose-200 rounded-lg px-2 h-8 shrink-0">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-              <span className="text-[11px] font-bold mono whitespace-nowrap">
+            <button
+              onClick={() => {
+                if (activeView !== 'gantt') onChangeView('gantt');
+                if (onToggleOverdueFilter) onToggleOverdueFilter();
+              }}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 h-8 shrink-0 transition-all font-bold cursor-pointer border ${
+                isOverdueFilterActive
+                  ? 'bg-rose-600 text-white border-rose-400 shadow-md ring-2 ring-rose-400/50'
+                  : 'bg-rose-950/80 hover:bg-rose-900 border-rose-800 text-rose-200 hover:text-white'
+              }`}
+              title={isOverdueFilterActive ? "Showing overdue tasks only (click to clear filter)" : "Click to filter chart to overdue tasks only"}
+            >
+              <AlertTriangle className={`w-3.5 h-3.5 ${isOverdueFilterActive ? 'text-white' : 'text-rose-400'} shrink-0`} />
+              <span className="text-[11px] mono whitespace-nowrap">
                 {overdueTasks}<span className="hidden sm:inline"> overdue</span>
               </span>
-            </div>
+              {isOverdueFilterActive && (
+                <span className="text-[9px] bg-rose-800 text-white px-1 py-0.2 rounded ml-0.5 uppercase tracking-wider font-extrabold">FILTERED</span>
+              )}
+            </button>
           )}
 
           {/* Team */}

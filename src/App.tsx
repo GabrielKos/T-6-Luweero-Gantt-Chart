@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   WBSTask, 
   UserProfile, 
@@ -17,6 +17,7 @@ import {
 import { deduplicateAndMergeTasks } from './lib/taskMerge';
 import { TIME_VIEWS, TimeViewTabs, getViewIdForDate } from './components/TimeViewTabs';
 import { getEATDateString } from './lib/dateUtils';
+import { isTaskOverdue } from './lib/projectStats';
 import { Header, AppView } from './components/Header';
 import { FilterBar } from './components/FilterBar';
 import { GanttChart } from './components/GanttChart';
@@ -26,7 +27,7 @@ import { AuthModal } from './components/AuthModal';
 import { ActivityLogDrawer } from './components/ActivityLogDrawer';
 import { UndoToast } from './components/UndoToast';
 import { ExportPdfModal, ExportSectionChoice } from './components/ExportPdfModal';
-import { generateSeedTasks, CANONICAL_WORK_PACKAGES, canonicalizeWorkPackage, getWorkPackageStyle } from './data/initialTasks';
+import { CANONICAL_WORK_PACKAGES, canonicalizeWorkPackage, getWorkPackageStyle } from './data/initialTasks';
 import { PLANT_BACKGROUND } from './assets/plantBackground';
 
 export default function App() {
@@ -118,33 +119,32 @@ export default function App() {
         setSyncStatus('synced');
       },
       (err) => {
-        // Firestore unreachable (offline, blocked, or rules denied). Fall back to
-        // the baseline workplan so the chart, the progress page and the exports
-        // still work — the header dot turns red so nobody mistakes it for live data.
-        console.error('Task sync error:', err);
+        console.error('Firestore tasks subscription error:', err);
         setSyncStatus('offline');
-        setTasks(prev => {
-          const fallback = prev.length ? prev : generateSeedTasks();
-          return deduplicateAndMergeTasks(fallback).deduplicatedTasks;
-        });
       }
     );
-
     return () => unsubscribeTasks();
   }, []);
 
-  // 3. Real-time Firestore Audit Logs Subscription
+  // 3. Real-time Firestore Activity Logs Subscription
   useEffect(() => {
-    const unsubscribeLogs = subscribeToLogs((updatedLogs) => {
-      setLogs(updatedLogs);
-    });
+    const unsubscribeLogs = subscribeToLogs(
+      (updatedLogs) => {
+        setLogs(updatedLogs);
+      },
+      (err) => {
+        console.error('Firestore logs subscription error:', err);
+      }
+    );
     return () => unsubscribeLogs();
   }, []);
 
-  // Extract unique Lead Officers, Supporting Members, and Work Packages for filters
+  // Computed filter options
   const leadOfficers = useMemo(() => {
     const set = new Set<string>();
-    tasks.forEach(t => { if (t.lead) set.add(t.lead); });
+    tasks.forEach(t => {
+      if (t.lead) set.add(t.lead);
+    });
     return Array.from(set).sort();
   }, [tasks]);
 
@@ -163,6 +163,32 @@ export default function App() {
 
   const workPackages = useMemo(() => {
     return Array.from(CANONICAL_WORK_PACKAGES);
+  }, []);
+
+  // Exact overdue task count
+  const overdueCount = useMemo(() => {
+    const cleanList = deduplicateAndMergeTasks(tasks).deduplicatedTasks;
+    return cleanList.filter(t => isTaskOverdue(t, simulationDate)).length;
+  }, [tasks, simulationDate]);
+
+  const isOverdueFilterActive = filters.status === 'OVERDUE' || filters.isCriticalOnly;
+
+  const handleToggleOverdueFilter = useCallback(() => {
+    setFilters(prev => {
+      if (prev.status === 'OVERDUE' || prev.isCriticalOnly) {
+        return { ...prev, status: 'ALL', isCriticalOnly: false };
+      }
+      return { ...prev, status: 'OVERDUE', isCriticalOnly: false };
+    });
+  }, []);
+
+  const handleSelectStatusFromDashboard = useCallback((status: string) => {
+    setActiveView('gantt');
+    setFilters(prev => ({
+      ...prev,
+      status,
+      isCriticalOnly: status === 'OVERDUE'
+    }));
   }, []);
 
   // Apply filters with clean deduplication
@@ -187,9 +213,15 @@ export default function App() {
       if (filters.package !== 'ALL' && canonicalizeWorkPackage(t.wp) !== filters.package) matches = false;
 
       // Effective Status
-      let effectiveStatus: string = t.status;
-      if (effectiveStatus !== 'COMPLETED' && t.endMs < simMs) {
-        effectiveStatus = 'OVERDUE';
+      let effectiveStatus = t.status;
+      if (effectiveStatus !== 'COMPLETED') {
+        if (isTaskOverdue(t, simulationDate)) {
+          effectiveStatus = 'OVERDUE';
+        } else if (t.startMs <= simMs) {
+          effectiveStatus = 'IN_PROGRESS';
+        } else {
+          effectiveStatus = 'PENDING';
+        }
       }
 
       // Status Filter
@@ -250,23 +282,7 @@ export default function App() {
     }
   };
 
-  // Task Handlers with Authentication Gates
-  const handleToggleTaskStatus = async (taskId: string, currentStatus: WBSTask['status']) => {
-    requireAuth(async () => {
-      const newStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
-      const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
-      
-      // Optimistic local state update
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus, updatedAt: Date.now(), updatedBy: activeUserName } : t));
-
-      try {
-        await updateTaskStatus(taskId, newStatus, activeUserName);
-      } catch (err) {
-        console.error('Update status error:', err);
-      }
-    });
-  };
-
+  // Handlers
   const handleOpenCreateTask = () => {
     requireAuth(() => {
       setEditingTask(null);
@@ -281,20 +297,36 @@ export default function App() {
     });
   };
 
-  const handleSaveTask = async (taskData: Partial<WBSTask> & { id?: string }) => {
+  const handleToggleTaskStatus = async (taskId: string, currentStatus: WBSTask['status']) => {
+    const nextStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+    const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
+    
+    // Optimistically update React state immediately (0ms UI lag)
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: nextStatus, updatedAt: Date.now(), updatedBy: activeUserName } : t));
+
+    // Asynchronously persist to Firestore
+    try {
+      await updateTaskStatus(taskId, nextStatus, activeUserName);
+    } catch (err) {
+      console.error('Update status error:', err);
+    }
+  };
+
+  const handleSaveTask = async (taskData: Partial<WBSTask>) => {
     const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
     const isEdit = !!taskData.id;
     const taskId = taskData.id || `T_${Date.now()}`;
     const deadline = taskData.deadline || '2026-12-31';
-    const dur = taskData.durationDays || 14;
     const end = new Date(`${deadline}T00:00:00`);
+    const dur = taskData.durationDays || 14;
     const startMs = taskData.startMs || (end.getTime() - (dur * 24 * 60 * 60 * 1000));
     const wp = canonicalizeWorkPackage(taskData.wp || 'Business Case Development');
+    const activity = (taskData.activity || 'Untitled Task').trim();
 
     const updatedTask: WBSTask = {
       id: taskId,
       wp,
-      activity: taskData.activity || 'Untitled Task',
+      activity,
       lead: taskData.lead || 'Shibah',
       support: taskData.support || '',
       deadline,
@@ -350,6 +382,10 @@ export default function App() {
     }
   };
 
+  const handleDismissUndo = useCallback(() => {
+    setLastDeletedTask(null);
+  }, []);
+
   const handleShareLink = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
@@ -370,23 +406,34 @@ export default function App() {
     return filteredTasks.filter(t => t.startMs <= endMs && t.endMs >= startMs);
   }, [filteredTasks, currentView]);
 
-  /** Human-readable description of what the exports were filtered by. */
   const filterSummary = useMemo(() => {
-    const parts: string[] = [];
-    if (filters.lead !== 'ALL') parts.push(`Lead ${filters.lead}`);
-    if (filters.support !== 'ALL') parts.push(`Support ${filters.support}`);
-    if (filters.package !== 'ALL') parts.push(filters.package);
-    if (filters.status !== 'ALL') parts.push(filters.status.replace('_', ' '));
-    if (filters.isCriticalOnly) parts.push('Critical only');
-    if (filters.searchQuery.trim()) parts.push(`"${filters.searchQuery.trim()}"`);
-    return parts;
+    const summary: string[] = [];
+    if (filters.lead !== 'ALL') summary.push(`Lead: ${filters.lead}`);
+    if (filters.support && filters.support !== 'ALL') summary.push(`Support: ${filters.support}`);
+    if (filters.package !== 'ALL') summary.push(`Package: ${filters.package}`);
+    if (filters.status !== 'ALL') summary.push(`Status: ${filters.status}`);
+    if (filters.isCriticalOnly) summary.push('Overdue Only');
+    if (filters.searchQuery.trim()) summary.push(`Search: "${filters.searchQuery.trim()}"`);
+    return summary;
   }, [filters]);
 
-  const handleExportPDF = async (section: ExportSectionChoice = 'all') => {
-    if (isExporting) return;
+  /** Snapshot PNG export: delegates to the renderer module. */
+  const handleExportPNG = async () => {
+    setIsExporting('png');
+    try {
+      const { exportProgressPng } = await import('./lib/exports');
+      await exportProgressPng(tasks, simulationDate);
+    } catch (err) {
+      console.error('PNG export failed:', err);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  /** Action Matrix PDF export: delegates to the PDF renderer module. */
+  const handleExportPDF = async (choices: ExportSectionChoice) => {
     setIsExporting('pdf');
     try {
-      // Loaded on demand — jsPDF is ~1MB and most sessions never export.
       const { exportActionMatrixPdf } = await import('./lib/exports');
       await exportActionMatrixPdf({
         tasks: exportTasks,
@@ -394,41 +441,32 @@ export default function App() {
         simulationDate,
         view: currentView,
         filterSummary,
-        exportSection: section
+        exportSection: choices
       });
-      setIsExportModalOpen(false);
     } catch (err) {
       console.error('PDF export failed:', err);
-      alert('Could not build the PDF. Please try again.');
     } finally {
       setIsExporting(null);
-    }
-  };
-
-  const handleExportPNG = async () => {
-    if (isExporting) return;
-    setIsExporting('png');
-    try {
-      const { exportProgressPng } = await import('./lib/exports');
-      await exportProgressPng(tasks, simulationDate);
-    } catch (err) {
-      console.error('PNG export failed:', err);
-      alert('Could not build the snapshot image. Please try again.');
-    } finally {
-      setIsExporting(null);
+      setIsExportModalOpen(false);
     }
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden antialiased font-sans text-slate-900 relative">
-      {/* Plant render behind the whole app shell */}
-      <div
-        className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: `url("${PLANT_BACKGROUND}")` }}
-        aria-hidden="true"
-      />
-
-      {/* Header */}
+    <div
+      className="flex flex-col h-screen w-screen overflow-hidden text-slate-900 font-sans select-none relative"
+      style={{
+        backgroundImage: `
+          linear-gradient(135deg, rgba(2, 6, 23, 0.45) 0%, rgba(15, 23, 42, 0.35) 50%, rgba(30, 58, 138, 0.3) 100%),
+          radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.22) 0%, transparent 60%),
+          url("${PLANT_BACKGROUND}")
+        `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center 40%',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#020617'
+      }}
+    >
+      {/* Pinned Top Navigation Bar */}
       <Header
         user={user}
         tasks={tasks}
@@ -441,6 +479,8 @@ export default function App() {
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenActivityLogs={() => setIsLogsDrawerOpen(true)}
         syncStatus={syncStatus}
+        isOverdueFilterActive={isOverdueFilterActive}
+        onToggleOverdueFilter={handleToggleOverdueFilter}
       />
 
       {activeView === 'gantt' ? (
@@ -457,6 +497,7 @@ export default function App() {
             onExportPng={handleExportPNG}
             onShareLink={handleShareLink}
             isCopied={isCopied}
+            overdueCount={overdueCount}
             isExporting={isExporting}
             exportCount={exportTasks.length}
           />
@@ -491,6 +532,7 @@ export default function App() {
             onExportPng={handleExportPNG}
             onExportPdf={() => setIsExportModalOpen(true)}
             isExporting={isExporting}
+            onSelectStatus={handleSelectStatusFromDashboard}
           />
         </main>
       )}
@@ -517,7 +559,7 @@ export default function App() {
       <UndoToast
         deletedTask={lastDeletedTask}
         onUndo={handleUndoDelete}
-        onDismiss={() => setLastDeletedTask(null)}
+        onDismiss={handleDismissUndo}
       />
 
       <AuthModal

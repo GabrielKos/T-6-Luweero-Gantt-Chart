@@ -27,7 +27,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [status, setStatus] = useState<TaskStatus>('PENDING');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [notes, setNotes] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -55,11 +54,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activity.trim()) return;
 
-    setIsSaving(true);
     const savePayload = {
       id: task?.id,
       wp,
@@ -73,29 +71,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       notes
     };
 
+    // Close the portal immediately and dispatch save optimistically (0ms lag)
+    onClose();
     try {
-      // Fire onSave and close modal immediately so UI never blocks or freezes
       onSave(savePayload);
-      onClose();
     } catch (err) {
       console.error('Save error:', err);
-      onClose();
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!task?.id || !onDelete) return;
-    setIsSaving(true);
+    onClose();
     try {
       onDelete(task);
-      onClose();
     } catch (err) {
       console.error('Delete error:', err);
-      onClose();
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -278,8 +269,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={isSaving}
-                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" /> Delete Task
               </button>
@@ -289,17 +279,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-colors"
+                className="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={isSaving}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs border border-blue-600"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs border border-blue-600 cursor-pointer"
               >
                 <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save Activity'}
+                <span>Save Activity</span>
               </button>
             </div>
           </div>
