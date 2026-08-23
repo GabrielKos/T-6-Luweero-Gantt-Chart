@@ -231,6 +231,9 @@ export function supportOfficerStats(tasks: WBSTask[], simDateOrMs: string | numb
   const dynamicSupporting = new Set<string>(canonicalSupporting);
 
   tasks.forEach(t => {
+    if (t.lead && !CANONICAL_LEADERS.includes(t.lead as any) && t.lead !== 'Entire Project Team' && t.lead !== 'Unassigned') {
+      dynamicSupporting.add(t.lead.trim());
+    }
     if (t.support) {
       t.support.split(',').forEach(s => {
         const clean = s.trim();
@@ -243,8 +246,9 @@ export function supportOfficerStats(tasks: WBSTask[], simDateOrMs: string | numb
 
   return Array.from(dynamicSupporting).map(name => {
     const items = tasks.filter(t => {
-      if (!t.support) return false;
-      return t.support.toLowerCase().includes(name.toLowerCase());
+      const matchLead = t.lead?.toLowerCase().trim() === name.toLowerCase();
+      const matchSupport = t.support && t.support.toLowerCase().includes(name.toLowerCase());
+      return matchLead || matchSupport;
     });
     const c = countStatuses(items, simDateOrMs);
     return {

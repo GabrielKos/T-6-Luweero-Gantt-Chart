@@ -50,7 +50,7 @@ export interface RawTaskItem {
 
 export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   // =========================================================================
-  // JULY 2026 (Page 1 - 12 Tasks)
+  // JULY 2026 (16 Tasks)
   // =========================================================================
   { wp: "Business Case Development", act: "Develop the Business Case outline, methodology, and implementation plan.", lead: "Shibah", support: "Morgan, Owen", dl: "2026-07-10", dur: 9 },
   { wp: "Business Case Development", act: "Develop the Project Vision, Objectives, and Investment Thesis.", lead: "Morgan", support: "Gabriel, Elizabeth", dl: "2026-07-17", dur: 7 },
@@ -62,11 +62,16 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Develop the Plant Design Brief.", lead: "Shibah", support: "Gabriel, Renorah", dl: "2026-07-24", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Develop the preliminary Site Master Plan.", lead: "Shibah", support: "Gabriel, Renorah", dl: "2026-07-31", dur: 20 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Develop the preliminary Production Process Flow and Material Flow.", lead: "Shibah", support: "Gabriel, Rodney", dl: "2026-07-31", dur: 20 },
-  { wp: "Human Capital Development", act: "Develop the competency matrix and training requirements.", lead: "Shibah", support: "Karen, Malik", dl: "2026-07-20", dur: 14 },
-  { wp: "Human Capital Development", act: "Develop the Battery Team Training Plan for FY2026/27", lead: "Entire Project Team", support: "All Members", dl: "2026-07-27", dur: 14 },
+  // Human Capital Development (July 2026)
+  { wp: "Human Capital Development", act: "Develop the Battery Team Training Plan for FY 2026/27.", lead: "Entire Project Team", support: "All Members", dl: "2026-07-27", dur: 14 },
+  { wp: "Human Capital Development", act: "Commence the Certified SOLIDWORKS Associate (CSWA) – Simulation and the Career and Technical Report Writing CPD.", lead: "Gabriel", support: "None", dl: "2026-07-31", dur: 14 },
+  { wp: "Human Capital Development", act: "Enroll in the Product Design and UX/UI Fundamentals course.", lead: "Renorah", support: "None", dl: "2026-07-31", dur: 14 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2026-07-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Certified Public Accountant (CPA) Programme.", lead: "Elizabeth", support: "None", dl: "2026-07-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2026-07-31", dur: 31 },
 
   // =========================================================================
-  // AUGUST 2026 (Page 2 - 23 Tasks)
+  // AUGUST 2026 (28 Tasks)
   // =========================================================================
   { wp: "Business Case Development", act: "Develop the Technology Selection and Chemistry Roadmap.", lead: "Shibah", support: "Druscilar, Mukama", dl: "2026-08-07", dur: 14 },
   { wp: "Business Case Development", act: "Develop the Plant Design and Production Capacity chapter.", lead: "Shibah", support: "Renorah, Gabriel", dl: "2026-08-12", dur: 14 },
@@ -87,13 +92,19 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Develop preliminary layouts for the Administration Building, Guest House, and Staff Residential.", lead: "Shibah", support: "Renorah", dl: "2026-08-22", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Develop the Statements of Requirements (SoRs) for the Design Consultant.", lead: "Shibah", support: "Renorah, Karen, Gabriel, Elizabeth", dl: "2026-08-27", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Develop the Terms of Reference (ToRs) for the Design Consultant procurement.", lead: "Shibah", support: "Gabriel, Karen, Renorah", dl: "2026-08-31", dur: 14 },
-  { wp: "Human Capital Development", act: "Enroll in the Battery Management Systems and Pack Design Program.", lead: "Druscilar", support: "Karen, Mukama", dl: "2026-08-08", dur: 7 },
-  { wp: "Human Capital Development", act: "Enroll in the Battery Management Systems Specialist Training Program.", lead: "Malik", support: "None", dl: "2026-08-15", dur: 7 },
-  { wp: "Human Capital Development", act: "Enroll in the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2026-08-22", dur: 7 },
-  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification", lead: "Morgan", support: "None", dl: "2026-08-31", dur: 30 },
+  // Human Capital Development (August 2026)
+  { wp: "Human Capital Development", act: "Enroll in the Battery Management Systems and Pack Design Program.", lead: "Druscilar", support: "Malik, Mukama", dl: "2026-08-08", dur: 8 },
+  { wp: "Human Capital Development", act: "Enroll in the Battery Management Systems Specialist Training Program.", lead: "Karen", support: "None", dl: "2026-08-15", dur: 14 },
+  { wp: "Human Capital Development", act: "Complete the CSWA – Simulation, Career and Technical Report Writing CPD, Lead IMS Auditor Training Certificate, and the GMUIPE Certification Renewal.", lead: "Gabriel", support: "None", dl: "2026-08-20", dur: 20 },
+  { wp: "Human Capital Development", act: "Enroll in the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2026-08-22", dur: 14 },
+  { wp: "Human Capital Development", act: "Enroll in and complete the Introduction to Battery Technology course.", lead: "Rodney", support: "None", dl: "2026-08-31", dur: 14 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2026-08-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Product Design and UX/UI Fundamentals course.", lead: "Renorah", support: "None", dl: "2026-08-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Certified Public Accountant (CPA) Programme.", lead: "Elizabeth", support: "None", dl: "2026-08-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2026-08-31", dur: 31 },
 
   // =========================================================================
-  // SEPTEMBER 2026 (Page 3 - 24 Tasks)
+  // SEPTEMBER 2026 (29 Tasks)
   // =========================================================================
   { wp: "Business Case Development", act: "Develop the Project Governance Framework.", lead: "Morgan", support: "Druscilar, Mukama", dl: "2026-09-05", dur: 14 },
   { wp: "Business Case Development", act: "Develop the Project Implementation Roadmap and Gantt Chart.", lead: "Shibah", support: "Renorah, Gabriel", dl: "2026-09-10", dur: 14 },
@@ -115,13 +126,19 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Develop the Terms of Reference (ToRs) and procurement documentation for the Early Works Contractor.", lead: "Shibah", support: "Renorah, Donald", dl: "2026-09-15", dur: 14 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Evaluate bids and negotiate with the preferred Early Works Contractor.", lead: "Shibah", support: "Morgan, Elizabeth, Donald", dl: "2026-09-25", dur: 10 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Award the Early Works Contract and mobilize the Contractor.", lead: "Shibah", support: "Morgan, Donald", dl: "2026-09-30", dur: 5 },
+  // Human Capital Development (September 2026)
   { wp: "Human Capital Development", act: "Complete the Battery Management Systems and Pack Design Program.", lead: "Druscilar", support: "Karen, Mukama", dl: "2026-09-30", dur: 30 },
   { wp: "Human Capital Development", act: "Complete the Battery Management Systems Specialist Training Program.", lead: "Malik", support: "None", dl: "2026-09-30", dur: 30 },
-  { wp: "Human Capital Development", act: "Continue in the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2026-09-30", dur: 30 },
-  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification", lead: "Morgan", support: "None", dl: "2026-09-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Complete the Product Design and UX/UI Fundamentals course.", lead: "Renorah", support: "None", dl: "2026-09-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Enroll in and commence the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2026-09-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Certified Public Accountant (CPA) Programme.", lead: "Elizabeth", support: "None", dl: "2026-09-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Commence preparation for the Certified SOLIDWORKS Professional (CSWP) – Simulation.", lead: "Gabriel", support: "None", dl: "2026-09-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2026-09-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2026-09-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2026-09-30", dur: 30 },
 
   // =========================================================================
-  // OCTOBER 2026 (Page 4 - 22 Tasks)
+  // OCTOBER 2026 (27 Tasks)
   // =========================================================================
   { wp: "Business Case Development", act: "Present the Draft Business Case to strategic partners (LIL, NEC and other stakeholders) and incorporate comments.", lead: "Shibah", support: "Morgan, Donald", dl: "2026-10-07", dur: 7 },
   { wp: "Business Case Development", act: "Present the Draft Business Case to the KMC Senior Management Team for review.", lead: "Shibah", support: "Morgan", dl: "2026-10-10", dur: 7 },
@@ -141,13 +158,19 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Review and approve the Early Works Design and Engineering package.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2026-10-10", dur: 10 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Extend the electrical power and water supply network to the project site.", lead: "Shibah", support: "Gabriel, Rodney, Mukama, Druscilar, Renorah", dl: "2026-10-17", dur: 14 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Commence construction of the temporary Site Offices and Perimeter Fence.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2026-10-31", dur: 20 },
+  // Human Capital Development (October 2026)
   { wp: "Human Capital Development", act: "Enroll in the Battery Technologies Specialization.", lead: "Druscilar", support: "Karen, Mukama", dl: "2026-10-10", dur: 10 },
   { wp: "Human Capital Development", act: "Enroll in the EV Battery Pack Design and BMS Protection Modeling Certification.", lead: "Malik", support: "None", dl: "2026-10-17", dur: 10 },
   { wp: "Human Capital Development", act: "Enroll for the Systems Engineering Certification.", lead: "Shibah", support: "None", dl: "2026-10-24", dur: 10 },
-  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2026-10-31", dur: 30 },
+  { wp: "Human Capital Development", act: "Enroll in the Engineering and Product Design Processes course.", lead: "Renorah", support: "None", dl: "2026-10-31", dur: 14 },
+  { wp: "Human Capital Development", act: "Continue preparation for the CSWP – Simulation and initiate the application for the Autumn MSc. in Robotics and Automation.", lead: "Gabriel", support: "None", dl: "2026-10-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2026-10-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2026-10-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2026-10-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2026-10-31", dur: 31 },
 
   // =========================================================================
-  // NOVEMBER 2026 (Page 5 - 19 Tasks)
+  // NOVEMBER 2026 (24 Tasks)
   // =========================================================================
   { wp: "Corporate Formation & ESIA", act: "Commence incorporation of the project entity and statutory registration processes.", lead: "Donald", support: "Owen, Shibah, Morgan", dl: "2026-11-10", dur: 10 },
   { wp: "Corporate Formation & ESIA", act: "Develop the Shareholders' Agreement and Corporate Governance Framework.", lead: "Donald", support: "Owen, Shibah, Morgan", dl: "2026-11-13", dur: 10 },
@@ -164,13 +187,19 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Construct the Perimeter Fence.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2026-11-10", dur: 15 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Construct the Site Offices.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2026-11-18", dur: 20 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Install ICT infrastructure.", lead: "Shibah", support: "Rodney, Mukama, Druscilar, Renorah", dl: "2026-11-30", dur: 15 },
+  // Human Capital Development (November 2026)
+  { wp: "Human Capital Development", act: "Complete the Certified SOLIDWORKS Professional (CSWP) – Simulation and complete enrollment for the Autumn MSc. in Robotics and Automation.", lead: "Gabriel", support: "None", dl: "2026-11-20", dur: 20 },
   { wp: "Human Capital Development", act: "Continue the Battery Technologies Specialization.", lead: "Druscilar", support: "Karen, Mukama", dl: "2026-11-30", dur: 30 },
   { wp: "Human Capital Development", act: "Continue the EV Battery Pack Design and BMS Protection Modeling Certification.", lead: "Malik", support: "None", dl: "2026-11-30", dur: 30 },
   { wp: "Human Capital Development", act: "Continue the Systems Engineering Certification.", lead: "Shibah", support: "None", dl: "2026-11-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Engineering and Product Design Processes course.", lead: "Renorah", support: "None", dl: "2026-11-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2026-11-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2026-11-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2026-11-30", dur: 30 },
   { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2026-11-30", dur: 30 },
 
   // =========================================================================
-  // DECEMBER 2026 (Page 6 - 19 Tasks)
+  // DECEMBER 2026 (24 Tasks)
   // =========================================================================
   { wp: "Corporate Formation & ESIA", act: "Complete land formalization and Joint Venture intellectual property registration.", lead: "Donald", support: "Owen, Shibah, Morgan", dl: "2026-12-10", dur: 10 },
   { wp: "Corporate Formation & ESIA", act: "Review and approve the Draft ESIA Report and Environmental & Social Management Plan.", lead: "Donald", support: "Owen, Shibah, Morgan", dl: "2026-12-15", dur: 10 },
@@ -187,13 +216,19 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Install the solar power system for the site offices.", lead: "Shibah", support: "Rodney, Karen, Malik, Renorah", dl: "2026-12-10", dur: 14 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Complete the Site Offices", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2026-12-17", dur: 14 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Complete the Perimeter Fence", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2026-12-22", dur: 14 },
+  // Human Capital Development (December 2026)
   { wp: "Human Capital Development", act: "Complete the Battery Technologies Specialization.", lead: "Druscilar", support: "Karen, Mukama", dl: "2026-12-22", dur: 22 },
   { wp: "Human Capital Development", act: "Complete the EV Battery Pack Design and BMS Protection Modeling Certification.", lead: "Malik", support: "None", dl: "2026-12-22", dur: 22 },
   { wp: "Human Capital Development", act: "Complete the Systems Engineering Certification.", lead: "Shibah", support: "None", dl: "2026-12-22", dur: 22 },
+  { wp: "Human Capital Development", act: "Complete the Engineering and Product Design Processes course.", lead: "Renorah", support: "None", dl: "2026-12-22", dur: 22 },
+  { wp: "Human Capital Development", act: "Commence the Certificate in Modern Robotics: Mechanics, Planning and Control Specialisation and the Project Management Professional (PMP) preparation.", lead: "Gabriel", support: "None", dl: "2026-12-22", dur: 22 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2026-12-22", dur: 22 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2026-12-22", dur: 22 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2026-12-22", dur: 22 },
   { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2026-12-22", dur: 22 },
 
   // =========================================================================
-  // JANUARY 2027 (Page 7 - 12 Tasks)
+  // JANUARY 2027 (16 Tasks)
   // =========================================================================
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review the Civil Engineering drawings.", lead: "Shibah", support: "Owen, Renorah, Rodney, Druscilar, Mukama", dl: "2027-01-08", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review the Structural Engineering drawings.", lead: "Shibah", support: "Owen, Renorah, Gabriel, Karen, Malik", dl: "2027-01-15", dur: 14 },
@@ -204,12 +239,17 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Technology Transfer Agreement", act: "Continue negotiations with shortlisted technology partners on technical and commercial requirements.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-01-12", dur: 14 },
   { wp: "Technology Transfer Agreement", act: "Review engineering data, software, equipment integration, and training proposals.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-01-24", dur: 14 },
   { wp: "Technology Transfer Agreement", act: "Evaluate technology partner proposals and recommend the preferred partner.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-01-31", dur: 14 },
-  { wp: "Human Capital Development", act: "Identify and nominate eight (8) staff for the CATL Level 1&2 Battery SMR Certification", lead: "Shibah", support: "None", dl: "2027-01-15", dur: 14 },
-  { wp: "Human Capital Development", act: "Prepare training schedules and prerequisite requirements for the CATL Level 1&2 Battery SMR Certification", lead: "Shibah", support: "None", dl: "2027-01-31", dur: 16 },
-  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-01-31", dur: 30 },
+  // Human Capital Development (January 2027)
+  { wp: "Human Capital Development", act: "Identify and nominate eight (8) staff for the CATL Level 1 & 2 Battery SMR Certification.", lead: "Shibah", support: "None", dl: "2027-01-15", dur: 14 },
+  { wp: "Human Capital Development", act: "Complete the Certificate in Modern Robotics: Mechanics, Planning and Control Specialisation and the Project Management Professional (PMP) Certificate.", lead: "Gabriel", support: "None", dl: "2027-01-20", dur: 20 },
+  { wp: "Human Capital Development", act: "Prepare training schedules and prerequisite requirements for the CATL Level 1 & 2 Battery SMR Certification.", lead: "Shibah", support: "None", dl: "2027-01-31", dur: 16 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2027-01-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2027-01-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2027-01-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-01-31", dur: 31 },
 
   // =========================================================================
-  // FEBRUARY 2027 (Page 8 - 9 Tasks)
+  // FEBRUARY 2027 (13 Tasks)
   // =========================================================================
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review the HVAC, Fire Protection, and Compressed Air System designs.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen", dl: "2027-02-07", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review the ICT, SCADA, and Plant Communications designs.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Malik", dl: "2027-02-14", dur: 14 },
@@ -217,23 +257,33 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Consolidate engineering review comments and issues to the Design Consultant.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-02-28", dur: 10 },
   { wp: "Technology Transfer Agreement", act: "Conduct technical, commercial, and legal due diligence on the preferred technology partner.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-02-14", dur: 14 },
   { wp: "Technology Transfer Agreement", act: "Negotiate intellectual property, training, and technical support arrangements.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-02-28", dur: 14 },
-  { wp: "Human Capital Development", act: "Complete registration and planning for the CATL Level 1,2 & 3 Battery SMR Certification.", lead: "Shibah", support: "None", dl: "2027-02-14", dur: 14 },
-  { wp: "Human Capital Development", act: "Enroll and Complete L1 CATL Battery SMR Certification for 8", lead: "Shibah", support: "Project Team (8 Staff)", dl: "2027-02-28", dur: 14 },
+  // Human Capital Development (February 2027)
+  { wp: "Human Capital Development", act: "Complete registration and planning for the CATL Level 1, 2 & 3 Battery SMR Certification.", lead: "Shibah", support: "None", dl: "2027-02-14", dur: 14 },
+  { wp: "Human Capital Development", act: "Enroll and complete the Level 1 CATL Battery SMR Certification for eight (8) staff.", lead: "Shibah", support: "Druscilar, Malik, Mukama, Karen, Gabriel, Rodney, Renorah, Elizabeth", dl: "2027-02-28", dur: 14 },
+  { wp: "Human Capital Development", act: "Prepare and submit the application for admission to the Autumn Master’s Programme in Robotics and Automation.", lead: "Gabriel", support: "None", dl: "2027-02-28", dur: 28 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2027-02-28", dur: 28 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2027-02-28", dur: 28 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2027-02-28", dur: 28 },
   { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-02-28", dur: 28 },
 
   // =========================================================================
-  // MARCH 2027 (Page 8 - 7 Tasks)
+  // MARCH 2027 (11 Tasks)
   // =========================================================================
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Complete multidisciplinary engineering design review.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-03-10", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Approve the Final Engineering Design Package.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-03-20", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Issue the Approved Plant Design and Engineering Specifications.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-03-31", dur: 14 },
   { wp: "Technology Transfer Agreement", act: "Conclude negotiations and agree on the principal commercial and technical terms of the Technology Transfer Agreement.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-03-15", dur: 15 },
   { wp: "Technology Transfer Agreement", act: "Confirm the preferred technology partner and implementation approach.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-03-31", dur: 16 },
-  { wp: "Human Capital Development", act: "Complete the CATL Level 1–3 Battery SMR Certification for eight (8) staff.", lead: "Shibah", support: "Mukama, Malik", dl: "2027-03-25", dur: 25 },
+  // Human Capital Development (March 2027)
+  { wp: "Human Capital Development", act: "Secure admission for the Autumn Master’s Programme in Robotics and Automation.", lead: "Gabriel", support: "None", dl: "2027-03-21", dur: 21 },
+  { wp: "Human Capital Development", act: "Complete the CATL Level 1 – 3 Battery SMR Certification for eight (8) staff.", lead: "Shibah", support: "Mukama, Malik, Druscilar, Karen, Gabriel, Rodney, Renorah, Elizabeth", dl: "2027-03-25", dur: 25 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems coursework.", lead: "Rodney", support: "None", dl: "2027-03-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2027-03-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2027-03-31", dur: 31 },
   { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-03-31", dur: 31 },
 
   // =========================================================================
-  // APRIL 2027 (Page 9 - 9 Tasks)
+  // APRIL 2027 (12 Tasks)
   // =========================================================================
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review and approve the Bills of Quantities (BoQs).", lead: "Shibah", support: "Renorah, Elizabeth", dl: "2027-04-10", dur: 14 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review and validate the Engineering Cost Estimates.", lead: "Shibah", support: "Morgan, Elizabeth", dl: "2027-04-20", dur: 14 },
@@ -241,12 +291,16 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Technology Transfer Agreement", act: "Review and confirm technical schedules, implementation plan, and knowledge transfer program.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-04-30", dur: 20 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Develop the Construction Statements of Requirements", lead: "Shibah", support: "Renorah, Gabriel", dl: "2027-04-30", dur: 20 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Develop the Construction Terms of Reference (ToRs).", lead: "Shibah", support: "Renorah, Donald", dl: "2027-04-30", dur: 20 },
+  // Human Capital Development (April 2027)
   { wp: "Human Capital Development", act: "Enroll in the Algorithms for Battery Management Systems Specialization.", lead: "Mukama", support: "None", dl: "2027-04-10", dur: 10 },
   { wp: "Human Capital Development", act: "Enroll in the EV Battery Pack Design and BMS Protection Modeling Certification.", lead: "Malik", support: "None", dl: "2027-04-20", dur: 10 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2027-04-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2027-04-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2027-04-30", dur: 30 },
   { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-04-30", dur: 30 },
 
   // =========================================================================
-  // MAY 2027 (Page 9 - 10 Tasks)
+  // MAY 2027 (13 Tasks)
   // =========================================================================
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review and approve engineering design revisions arising from constructability.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-05-15", dur: 15 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Update the Plant Design and Engineering Specifications to reflect approved design changes.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-05-31", dur: 16 },
@@ -255,21 +309,30 @@ export const RAW_INITIAL_TASKS: RawTaskItem[] = [
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Prepare the Construction Procurement Documentation.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-05-10", dur: 10 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Evaluate the technical proposals.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-05-25", dur: 15 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Evaluate the financial proposals and negotiate with the preferred consultant.", lead: "Shibah", support: "Owen, Morgan, Elizabeth, Donald", dl: "2027-05-31", dur: 10 },
+  // Human Capital Development (May 2027)
   { wp: "Human Capital Development", act: "Continue the Algorithms for Battery Management Systems Specialization.", lead: "Mukama", support: "None", dl: "2027-05-31", dur: 31 },
   { wp: "Human Capital Development", act: "Continue the EV Battery Pack Design and BMS Protection Modeling Certification.", lead: "Malik", support: "None", dl: "2027-05-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2027-05-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2027-05-31", dur: 31 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2027-05-31", dur: 31 },
   { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-05-31", dur: 31 },
 
   // =========================================================================
-  // JUNE 2027 (Page 10 - 8 Tasks)
+  // JUNE 2027 (12 Tasks)
   // =========================================================================
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Review and approve engineering design revisions arising from constructability.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-06-15", dur: 15 },
   { wp: "Plant Design & Engineering Specifications of the Plant", act: "Update the Plant Design and Engineering Specifications to reflect approved design changes.", lead: "Shibah", support: "Owen, Gabriel, Rodney, Karen, Malik, Mukama, Druscilar, Renorah", dl: "2027-06-30", dur: 15 },
   { wp: "Technology Transfer Agreement", act: "Obtain corporate approvals for execution of the Technology Transfer Agreement.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-06-15", dur: 15 },
   { wp: "Technology Transfer Agreement", act: "Complete partner approvals and prepare the execution copies of the Technology Transfer Agreement.", lead: "Donald", support: "Shibah, Morgan, Owen", dl: "2027-06-25", dur: 10 },
   { wp: "Construction, Tooling, and Furnishing of the Plant", act: "Award the Construction Contract", lead: "Shibah", support: "Donald", dl: "2027-06-30", dur: 15 },
+  // Human Capital Development (June 2027)
   { wp: "Human Capital Development", act: "Complete the Algorithms for Battery Management Systems Specialization.", lead: "Mukama", support: "None", dl: "2027-06-30", dur: 30 },
   { wp: "Human Capital Development", act: "Complete the EV Battery Pack Design and BMS Protection Modeling Certification.", lead: "Malik", support: "None", dl: "2027-06-30", dur: 30 },
-  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-06-30", dur: 30 }
+  { wp: "Human Capital Development", act: "Continue the MSc. in Advanced Manufacturing Systems.", lead: "Rodney", support: "None", dl: "2027-06-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the CPA Programme (completion August 2027) and the AI Finance Specialisation.", lead: "Elizabeth", support: "None", dl: "2027-06-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Diploma in Environmental, Social and Governance (ESG).", lead: "Owen", support: "None", dl: "2027-06-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Continue the Chartered Financial Analyst (CFA) certification.", lead: "Morgan", support: "None", dl: "2027-06-30", dur: 30 },
+  { wp: "Human Capital Development", act: "Develop the Battery Team Training Plan for FY 2027/28.", lead: "Entire Project Team", support: "All Members", dl: "2027-06-30", dur: 14 }
 ];
 
 export function generateSeedTasks(): WBSTask[] {
