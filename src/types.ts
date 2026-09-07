@@ -24,6 +24,7 @@ export interface WBSTask {
   updatedBy?: string;
   updatedAt?: number;
   style?: WorkPackageStyle;
+  mergedDocIds?: string[];
 }
 
 export interface UserProfile {

@@ -1,7 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write for all users (team members/shared link collaboration)
+    match /tasks_kmc_v1/{taskId} {
+      allow read, write: if true;
+    }
+    match /deleted_tasks_kmc_v1/{deletedId} {
+      allow read, write: if true;
+    }
+    match /activity_logs_kmc_v1/{logId} {
+      allow read, write: if true;
+    }
     match /{document=**} {
       allow read, write: if true;
     }

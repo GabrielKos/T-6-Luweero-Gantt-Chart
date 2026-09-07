@@ -421,7 +421,8 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
     notes: combinedNotes,
     updatedBy: latestUpdateBy,
     updatedAt: latestUpdateAt,
-    style: finalStyle
+    style: finalStyle,
+    mergedDocIds: cluster.map(c => c.id)
   };
 
   return {

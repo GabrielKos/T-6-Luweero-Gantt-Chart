@@ -3,7 +3,8 @@ import {
   WBSTask, 
   UserProfile, 
   ActivityLog, 
-  FilterState 
+  FilterState,
+  TaskStatus 
 } from './types';
 import { 
   subscribeToTasks, 
@@ -228,7 +229,7 @@ export default function App() {
       if (filters.package !== 'ALL' && canonicalizeWorkPackage(t.wp) !== filters.package) matches = false;
 
       // Effective Status
-      let effectiveStatus = t.status;
+      let effectiveStatus: TaskStatus | 'OVERDUE' = t.status;
       if (effectiveStatus !== 'COMPLETED') {
         if (isTaskOverdue(t, simulationDate)) {
           effectiveStatus = 'OVERDUE';
@@ -378,8 +379,9 @@ export default function App() {
       const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
       setLastDeletedTask(taskToDelete);
       // Optimistically remove from state immediately for snappy UI
-      setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
-      await deleteTask(taskToDelete.id, taskToDelete.activity, activeUserName);
+      const idsToRemove = new Set<string>([taskToDelete.id, ...(taskToDelete.mergedDocIds || [])]);
+      setTasks(prev => prev.filter(t => !idsToRemove.has(t.id)));
+      await deleteTask(taskToDelete.id, taskToDelete.activity, activeUserName, taskToDelete.mergedDocIds);
     } catch (err) {
       console.error('Delete error:', err);
     }

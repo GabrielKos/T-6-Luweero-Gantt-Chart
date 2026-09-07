@@ -50,89 +50,54 @@ export const db = firebaseConfig.firestoreDatabaseId
   : getFirestore(app);
 
 const COLLECTION_NAME = 'tasks_kmc_v1';
+const DELETED_COLLECTION_NAME = 'deleted_tasks_kmc_v1';
 const LOGS_COLLECTION = 'activity_logs_kmc_v1';
 
-let hasRunInitialSync = false;
-
-/**
- * One-time background sync that ensures Firestore has all 161 canonical deliverables
- * and eliminates duplicate docs without looping.
- */
-async function syncCanonicalTasksToFirestore(existingTasks: WBSTask[]) {
-  if (hasRunInitialSync) return;
-  hasRunInitialSync = true;
-
-  try {
-    const canonicalSeedList = generateSeedTasks();
-    const missingTasks: WBSTask[] = [];
-
-    for (const seed of canonicalSeedList) {
-      const seedMonth = getYearMonth(seed.deadline);
-      const seedNorm = normalizeString(seed.activity);
-
-      const exists = existingTasks.some((rt) => {
-        const rtMonth = getYearMonth(rt.deadline);
-        if (rtMonth !== seedMonth) return false;
-        return normalizeString(rt.activity) === seedNorm || areTasksOverlapping(rt, seed);
-      });
-
-      if (!exists) {
-        missingTasks.push(seed);
-      }
-    }
-
-    if (missingTasks.length > 0) {
-      console.log(`[Reconciliation Engine] Writing ${missingTasks.length} missing canonical tasks to Firestore in background...`);
-      const CHUNK_SIZE = 200;
-      for (let i = 0; i < missingTasks.length; i += CHUNK_SIZE) {
-        const chunk = missingTasks.slice(i, i + CHUNK_SIZE);
-        const batch = writeBatch(db);
-        chunk.forEach((t) => {
-          const docRef = doc(db, COLLECTION_NAME, t.id);
-          batch.set(docRef, {
-            wp: t.wp,
-            activity: t.activity,
-            lead: t.lead,
-            support: t.support,
-            deadline: t.deadline,
-            startMs: t.startMs,
-            endMs: t.endMs,
-            status: t.status,
-            durationDays: t.durationDays,
-            priority: t.priority,
-            notes: t.notes || '',
-            updatedBy: 'Canonical Sync',
-            updatedAt: Date.now()
-          }, { merge: true });
-        });
-        await batch.commit();
-      }
-    }
-  } catch (err) {
-    console.warn('[Sync Warning] Background sync error:', err);
-  }
-}
+// In-memory sets of tombstoned task IDs and normalized titles to prevent resurrection
+const deletedTaskIdsCache = new Set<string>();
+const deletedTaskTitlesCache = new Set<string>();
 
 /**
  * Subscribe to real-time WBS tasks from Firestore.
- * Pure snapshot mapping with in-memory canonical hydration for instant, lag-free UI rendering.
+ * Listens to active tasks and filters out any tombstoned / deleted tasks.
+ * NEVER re-inserts deleted tasks or overrides user deletions.
  */
 export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?: (err: Error) => void) {
   const tasksCol = collection(db, COLLECTION_NAME);
+  const deletedCol = collection(db, DELETED_COLLECTION_NAME);
 
-  return onSnapshot(tasksCol, (snapshot) => {
-    if (snapshot.empty) {
-      const initialSeeds = generateSeedTasks();
-      onUpdate(initialSeeds);
-      seedDatabase().catch(err => console.warn('Seed error:', err));
+  let latestTasksSnapshot: any = null;
+
+  const processAndEmit = () => {
+    if (!latestTasksSnapshot) return;
+
+    if (latestTasksSnapshot.empty) {
+      if (deletedTaskIdsCache.size === 0) {
+        // Only brand-new uninitialized empty database
+        const initialSeeds = generateSeedTasks();
+        onUpdate(initialSeeds);
+        seedDatabase().catch(err => console.warn('Seed error:', err));
+      } else {
+        onUpdate([]);
+      }
       return;
     }
 
     const rawTaskList: WBSTask[] = [];
+    const docsToPurge: string[] = [];
 
-    snapshot.forEach((docSnap) => {
+    latestTasksSnapshot.forEach((docSnap: any) => {
+      const id = docSnap.id;
       const data = docSnap.data();
       const rawActivity = (data.activity || '').trim();
+      const normActivity = normalizeString(rawActivity);
+
+      // Check if this task was explicitly deleted
+      if (deletedTaskIdsCache.has(id) || (normActivity && deletedTaskTitlesCache.has(normActivity))) {
+        docsToPurge.push(id);
+        return;
+      }
+
       const deadline = data.deadline || '2026-12-31';
       const dur = data.durationDays || 14;
       const endMs = data.endMs || new Date(`${deadline}T00:00:00`).getTime();
@@ -140,7 +105,7 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
       const wp = canonicalizeWorkPackage(data.wp || 'Business Case Development');
 
       rawTaskList.push({
-        id: docSnap.id,
+        id,
         wp,
         activity: rawActivity,
         lead: data.lead || 'Shibah',
@@ -158,40 +123,50 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
       });
     });
 
-    // In-memory canonical guarantee: check if any master tasks are missing and blend them in memory
-    const canonicalSeedList = generateSeedTasks();
-    const missingInMem: WBSTask[] = [];
-
-    for (const seed of canonicalSeedList) {
-      const exists = rawTaskList.some((rt) => {
-        if (rt.id === seed.id) return true;
-        // Check if matching duplicate task within the same month and same work package
-        return areTasksOverlapping(rt, seed);
+    // Clean up any lingering resurrected docs from the database in the background
+    if (docsToPurge.length > 0) {
+      docsToPurge.forEach((docId) => {
+        deleteDoc(doc(db, COLLECTION_NAME, docId)).catch(() => {});
       });
-
-      if (!exists) {
-        missingInMem.push(seed);
-      }
     }
 
-    const combinedList = [...rawTaskList, ...missingInMem];
-    const { deduplicatedTasks } = deduplicateAndMergeTasks(combinedList);
-
-    // Push instantly to UI without latency
+    const { deduplicatedTasks } = deduplicateAndMergeTasks(rawTaskList);
     onUpdate(deduplicatedTasks);
+  };
 
-    // Trigger one-time background sync if not already done
-    if (!hasRunInitialSync) {
-      syncCanonicalTasksToFirestore(rawTaskList);
-    }
+  // Subscribe to tombstones collection to keep deleted set up to date in real time
+  const unsubDeleted = onSnapshot(deletedCol, (snapshot) => {
+    deletedTaskIdsCache.clear();
+    deletedTaskTitlesCache.clear();
+    snapshot.forEach((d) => {
+      const data = d.data();
+      deletedTaskIdsCache.add(d.id);
+      if (data.taskId) deletedTaskIdsCache.add(data.taskId);
+      if (data.taskTitle) deletedTaskTitlesCache.add(normalizeString(data.taskTitle));
+    });
+    processAndEmit();
+  }, (err) => {
+    console.warn('Deleted tasks subscription warning:', err);
+    processAndEmit();
+  });
+
+  // Subscribe to active tasks collection
+  const unsubTasks = onSnapshot(tasksCol, (snapshot) => {
+    latestTasksSnapshot = snapshot;
+    processAndEmit();
   }, (err) => {
     console.error('Firestore task listener error:', err);
     if (onError) onError(err);
   });
+
+  return () => {
+    unsubDeleted();
+    unsubTasks();
+  };
 }
 
 /**
- * Seed initial canonical WBS dataset (all 161 tasks)
+ * Seed initial canonical WBS dataset (only on fresh, uninitialized database)
  */
 export async function seedDatabase() {
   const tasksCol = collection(db, COLLECTION_NAME);
@@ -202,6 +177,9 @@ export async function seedDatabase() {
     const chunk = seedData.slice(i, i + CHUNK_SIZE);
     const batch = writeBatch(db);
     chunk.forEach((t) => {
+      if (deletedTaskIdsCache.has(t.id) || (t.activity && deletedTaskTitlesCache.has(normalizeString(t.activity)))) {
+        return;
+      }
       const docRef = doc(tasksCol, t.id);
       batch.set(docRef, {
         wp: t.wp,
@@ -281,16 +259,63 @@ export async function saveTask(task: Partial<WBSTask> & { id?: string }, userNam
 }
 
 /**
- * Delete task from Firestore
+ * Delete task from Firestore with durable tombstoning so it never resurrects
  */
-export async function deleteTask(taskId: string, taskTitle: string, userName: string) {
-  try {
-    const taskRef = doc(db, COLLECTION_NAME, taskId);
-    await deleteDoc(taskRef);
-  } catch (e) {
-    console.warn('Direct deleteDoc error:', e);
+export async function deleteTask(
+  taskId: string, 
+  taskTitle: string, 
+  userName: string,
+  associatedDocIds?: string[]
+) {
+  // 1. Immediately update in-memory caches to prevent any UI flicker
+  deletedTaskIdsCache.add(taskId);
+  if (taskTitle) {
+    deletedTaskTitlesCache.add(normalizeString(taskTitle));
+  }
+  if (associatedDocIds && associatedDocIds.length > 0) {
+    associatedDocIds.forEach(id => deletedTaskIdsCache.add(id));
   }
 
+  try {
+    // 2. Delete primary document from tasks_kmc_v1
+    const taskRef = doc(db, COLLECTION_NAME, taskId);
+    await deleteDoc(taskRef);
+
+    // Delete any associated duplicate document IDs as well
+    if (associatedDocIds && associatedDocIds.length > 0) {
+      await Promise.all(
+        associatedDocIds
+          .filter(id => id !== taskId)
+          .map(id => deleteDoc(doc(db, COLLECTION_NAME, id)).catch(() => {}))
+      );
+    }
+
+    // 3. Persist tombstone to deleted_tasks_kmc_v1
+    const tombRef = doc(db, DELETED_COLLECTION_NAME, taskId);
+    await setDoc(tombRef, {
+      taskId,
+      taskTitle,
+      deletedBy: userName,
+      deletedAt: Date.now()
+    });
+
+    if (associatedDocIds && associatedDocIds.length > 0) {
+      for (const id of associatedDocIds) {
+        if (id !== taskId) {
+          await setDoc(doc(db, DELETED_COLLECTION_NAME, id), {
+            taskId: id,
+            taskTitle,
+            deletedBy: userName,
+            deletedAt: Date.now()
+          }).catch(() => {});
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Direct deleteDoc or tombstone error:', e);
+  }
+
+  // 4. Log activity as DELETED
   logActivity(taskId, taskTitle, 'Deleted task from WBS', userName, 'DELETED').catch(() => {});
 }
 
@@ -298,7 +323,25 @@ export async function deleteTask(taskId: string, taskTitle: string, userName: st
  * Restore previously deleted task
  */
 export async function restoreTask(task: WBSTask, userName: string) {
+  // 1. Remove from local caches
+  deletedTaskIdsCache.delete(task.id);
+  if (task.activity) {
+    deletedTaskTitlesCache.delete(normalizeString(task.activity));
+  }
+  if (task.mergedDocIds) {
+    task.mergedDocIds.forEach(id => deletedTaskIdsCache.delete(id));
+  }
+
   try {
+    // 2. Remove tombstone from deleted_tasks_kmc_v1
+    await deleteDoc(doc(db, DELETED_COLLECTION_NAME, task.id)).catch(() => {});
+    if (task.mergedDocIds) {
+      for (const id of task.mergedDocIds) {
+        await deleteDoc(doc(db, DELETED_COLLECTION_NAME, id)).catch(() => {});
+      }
+    }
+
+    // 3. Restore document in tasks_kmc_v1
     const tasksCol = collection(db, COLLECTION_NAME);
     const taskRef = doc(tasksCol, task.id);
     const wp = canonicalizeWorkPackage(task.wp || 'Business Case Development');
@@ -328,7 +371,10 @@ export async function restoreTask(task: WBSTask, userName: string) {
 /**
  * Subscribe to real-time activity logs
  */
-export function subscribeToLogs(onUpdate: (logs: ActivityLog[]) => void) {
+export function subscribeToLogs(
+  onUpdate: (logs: ActivityLog[]) => void, 
+  onError?: (err: Error) => void
+) {
   const logsCol = collection(db, LOGS_COLLECTION);
   const q = query(logsCol, orderBy('timestamp', 'desc'), limit(50));
 
@@ -349,6 +395,7 @@ export function subscribeToLogs(onUpdate: (logs: ActivityLog[]) => void) {
     onUpdate(logs);
   }, (err) => {
     console.warn('Audit logs listener warning:', err);
+    if (onError) onError(err);
   });
 }
 
