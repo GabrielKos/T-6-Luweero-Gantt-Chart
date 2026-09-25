@@ -175,7 +175,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       status: finalStatus,
       priority,
       notes,
-      subtasks
+      subtasks,
+      mergedDocIds: task?.mergedDocIds
     };
 
     onClose();
@@ -425,7 +426,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <div>
                 <input
                   type="text"
-                  placeholder="Sub-task name (e.g. Market Survey of Consultants)..."
+                  placeholder="Sub-task name or milestone title..."
                   value={newSubtaskTitle}
                   onChange={(e) => setNewSubtaskTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -457,7 +458,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
                 <input
                   type="text"
-                  placeholder="e.g. Gabriel and Druscillar"
+                  placeholder="e.g. Shibah, Gabriel, Owen..."
                   value={newSubtaskAssignees}
                   onChange={(e) => setNewSubtaskAssignees(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs font-medium rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none mb-1.5"

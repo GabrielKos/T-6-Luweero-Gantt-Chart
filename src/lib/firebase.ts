@@ -93,7 +93,7 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
       const normActivity = normalizeString(rawActivity);
 
       // Check if this task was explicitly deleted
-      if (deletedTaskIdsCache.has(id) || (normActivity && deletedTaskTitlesCache.has(normActivity))) {
+      if (deletedTaskIdsCache.has(id)) {
         docsToPurge.push(id);
         return;
       }
@@ -104,34 +104,7 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
       const startMs = data.startMs || (endMs - (dur * 24 * 60 * 60 * 1000));
       const wp = canonicalizeWorkPackage(data.wp || 'Business Case Development');
 
-      let subtasks = Array.isArray(data.subtasks) ? data.subtasks : [];
-      if (subtasks.length === 0 && normActivity.includes('corporate formation') && normActivity.includes('corporate architecture')) {
-        subtasks = [
-          {
-            id: `st_${id}_1`,
-            title: 'Market Survey of Consultants',
-            assignees: 'Gabriel and Druscillar',
-            completed: true,
-            createdAt: Date.now() - 86400000 * 5
-          },
-          {
-            id: `st_${id}_2`,
-            title: 'Evaluating the consultants',
-            assignees: 'Shibah and Owen',
-            completed: false,
-            createdAt: Date.now() - 86400000 * 3
-          },
-          {
-            id: `st_${id}_3`,
-            title: 'Consolidate Architecture Framework & Governance Proposal',
-            assignees: 'Morgan and Elizabeth',
-            completed: false,
-            createdAt: Date.now() - 86400000 * 1
-          }
-        ];
-        // Persist to doc so it's saved in Firestore
-        updateDoc(doc(db, COLLECTION_NAME, id), { subtasks }).catch(() => {});
-      }
+      const subtasks = Array.isArray(data.subtasks) ? data.subtasks : [];
 
       let taskStatus = data.status || 'PENDING';
       if (subtasks.length > 0) {
@@ -363,6 +336,23 @@ export async function saveTask(task: Partial<WBSTask> & { id?: string }, userNam
 
   const taskRef = doc(tasksCol, taskId);
   await setDoc(taskRef, taskData, { merge: true });
+
+  // Un-tombstone if re-created or edited
+  deletedTaskIdsCache.delete(taskId);
+  if (task.activity) {
+    deletedTaskTitlesCache.delete(normalizeString(task.activity));
+  }
+
+  // If this task was part of a merged cluster, purge secondary duplicate documents
+  // so older duplicate docs in Firestore cannot conflict or resurrect stale subtasks/fields
+  if (task.mergedDocIds && Array.isArray(task.mergedDocIds)) {
+    const secondaryIds = task.mergedDocIds.filter(id => id && id !== taskId);
+    if (secondaryIds.length > 0) {
+      await Promise.all(
+        secondaryIds.map(secId => deleteDoc(doc(db, COLLECTION_NAME, secId)).catch(() => {}))
+      );
+    }
+  }
 
   // Non-blocking activity log
   logActivity(taskId, taskData.activity, isEdit ? 'Updated task details' : 'Created new WBS task', userName, isEdit ? 'UPDATED' : 'CREATED').catch(() => {});

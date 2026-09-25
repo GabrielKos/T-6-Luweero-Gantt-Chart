@@ -397,16 +397,22 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
   const latestUpdateAt = latestTask.updatedAt || Date.now();
   const latestUpdateBy = latestTask.updatedBy || 'Team Member';
 
-  // 8b. Merge subtasks from cluster without losing any
-  const combinedSubtasks: WBSSubtask[] = [];
-  const seenSubtaskKeys = new Set<string>();
-  for (const t of cluster) {
-    if (t.subtasks && Array.isArray(t.subtasks)) {
-      for (const st of t.subtasks) {
-        const key = st.id || st.title.toLowerCase().trim();
-        if (!seenSubtaskKeys.has(key)) {
-          seenSubtaskKeys.add(key);
-          combinedSubtasks.push(st);
+  // 8b. Prioritize subtasks from latest user edit to strictly respect subtask deletions
+  let combinedSubtasks: WBSSubtask[] = [];
+  if (Array.isArray(latestTask.subtasks)) {
+    // If the latest task update defines subtasks (including an empty array [] after deletion), respect it strictly!
+    combinedSubtasks = latestTask.subtasks;
+  } else {
+    // Otherwise gather from primary doc or cluster members
+    const seenSubtaskKeys = new Set<string>();
+    for (const t of cluster) {
+      if (t.subtasks && Array.isArray(t.subtasks)) {
+        for (const st of t.subtasks) {
+          const key = st.id || st.title.toLowerCase().trim();
+          if (!seenSubtaskKeys.has(key)) {
+            seenSubtaskKeys.add(key);
+            combinedSubtasks.push(st);
+          }
         }
       }
     }

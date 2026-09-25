@@ -398,7 +398,8 @@ export default function App() {
       subtasks,
       updatedBy: activeUserName,
       updatedAt: Date.now(),
-      style: getWorkPackageStyle(wp)
+      style: getWorkPackageStyle(wp),
+      mergedDocIds: taskData.mergedDocIds
     };
 
     // Optimistically update React state immediately (0ms delay)
