@@ -8,6 +8,15 @@ export interface WorkPackageStyle {
   text: string;
 }
 
+export interface WBSSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
+  assignees?: string;
+  deadline?: string;
+  createdAt?: number;
+}
+
 export interface WBSTask {
   id: string;
   wp: string; // Work Package
@@ -25,6 +34,7 @@ export interface WBSTask {
   updatedAt?: number;
   style?: WorkPackageStyle;
   mergedDocIds?: string[];
+  subtasks?: WBSSubtask[];
 }
 
 export interface UserProfile {

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { WBSTask, ViewOption } from '../types';
+import { WBSTask, ViewOption, WBSSubtask } from '../types';
 import { isTaskOverdue } from '../lib/projectStats';
 import { 
   Check, 
@@ -13,7 +13,12 @@ import {
   Layers,
   Columns,
   List,
-  BarChart3
+  BarChart3,
+  ListChecks,
+  Plus,
+  Users,
+  ChevronDown,
+  X
 } from 'lucide-react';
 
 interface GanttChartProps {
@@ -22,6 +27,7 @@ interface GanttChartProps {
   simulationDate: string;
   layout: 'timeline' | 'officer';
   onToggleTaskStatus: (taskId: string, currentStatus: WBSTask['status']) => void;
+  onToggleSubtask?: (task: WBSTask, subtaskId: string) => void;
   onEditTask: (task: WBSTask) => void;
   onDeleteTask: (task: WBSTask) => void;
 }
@@ -32,6 +38,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   simulationDate,
   layout,
   onToggleTaskStatus,
+  onToggleSubtask,
   onEditTask,
   onDeleteTask
 }) => {
@@ -153,7 +160,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       }
     };
 
-    // Initial snap + delayed pass to ensure container layout dimensions are settled
     snapToLeaderLine(false);
     const timer = setTimeout(() => snapToLeaderLine(true), 120);
 
@@ -161,10 +167,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   }, [currentView.id, simulationDate, showTodayLine, todayLeftPct, mobilePane]);
 
   return (
-    // No fill here — the left task list and right timeline canvas each set
-    // their own translucency below. Filling this outer wrapper too would
-    // stack on top of theirs and wash the plant photo back out almost
-    // completely, which is the opposite of what we want.
     <div className="flex-1 overflow-hidden flex flex-col relative">
       {/* Mobile Screen Navigation Bar (< 768px) */}
       <div className="md:hidden bg-slate-900 text-slate-200 px-3 py-1.5 flex items-center justify-between border-b border-slate-800 shrink-0 z-30">
@@ -205,13 +207,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           className={`shrink-0 bg-white/93 backdrop-blur-sm border-r border-slate-200 flex flex-col min-h-0 shadow-xs z-20 transition-all duration-200 ${
             mobilePane === 'timeline' ? 'hidden md:flex md:w-[320px] lg:w-[420px]' : 
             mobilePane === 'tasks' ? 'w-full md:w-[320px] lg:w-[420px]' : 
-            'w-[150px] sm:w-[260px] md:w-[320px] lg:w-[420px]'
+            'w-[160px] sm:w-[280px] md:w-[340px] lg:w-[420px]'
           }`}
         >
           {/* Header */}
           <div className="flex bg-slate-100/93 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 sm:px-3 py-2.5 shrink-0 h-10 items-center">
             <div className="w-6 sm:w-8 text-center shrink-0">Done</div>
-            <div className="flex-1 px-1 sm:px-2 truncate">Task Details</div>
+            <div className="flex-1 px-1 sm:px-2 truncate">Task & Sub-Tasks</div>
             <div className="hidden sm:block w-20 text-right pr-2 shrink-0">Deadline</div>
             <div className="w-14 sm:w-16 text-center shrink-0">Action</div>
           </div>
@@ -240,6 +242,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       simMs={simMs}
                       simulationDate={simulationDate}
                       onToggleStatus={onToggleTaskStatus}
+                      onToggleSubtask={onToggleSubtask}
                       onEdit={onEditTask}
                       onDelete={onDeleteTask}
                     />
@@ -256,6 +259,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   simMs={simMs}
                   simulationDate={simulationDate}
                   onToggleStatus={onToggleTaskStatus}
+                  onToggleSubtask={onToggleSubtask}
                   onEdit={onEditTask}
                   onDelete={onDeleteTask}
                 />
@@ -331,6 +335,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                             totalMs={totalMs}
                             simMs={simMs}
                             simulationDate={simulationDate}
+                            onEdit={onEditTask}
                           />
                         ))}
                       </React.Fragment>
@@ -344,6 +349,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                         totalMs={totalMs}
                         simMs={simMs}
                         simulationDate={simulationDate}
+                        onEdit={onEditTask}
                       />
                     ))
                   )}
@@ -364,6 +370,7 @@ interface TaskRowItemProps {
   simMs: number;
   simulationDate: string;
   onToggleStatus: (id: string, current: WBSTask['status']) => void;
+  onToggleSubtask?: (task: WBSTask, subtaskId: string) => void;
   onEdit: (task: WBSTask) => void;
   onDelete: (task: WBSTask) => void;
 }
@@ -374,10 +381,20 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
   simMs,
   simulationDate,
   onToggleStatus,
+  onToggleSubtask,
   onEdit,
   onDelete
 }) => {
-  const isCompleted = task.status === 'COMPLETED';
+  const [showSubtasksFlyout, setShowSubtasksFlyout] = useState(false);
+
+  const subtasks = task.subtasks || [];
+  const hasSubtasks = subtasks.length > 0;
+  const completedSubtasksCount = subtasks.filter(s => s.completed).length;
+  const completionPct = hasSubtasks
+    ? Math.round((completedSubtasksCount / subtasks.length) * 100)
+    : (task.status === 'COMPLETED' ? 100 : 0);
+
+  const isCompleted = task.status === 'COMPLETED' || (hasSubtasks && completionPct === 100);
   const isOverdue = isTaskOverdue(task, simulationDate);
   const isOdd = idx % 2 !== 0;
 
@@ -388,21 +405,22 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
   const displayDl = `${dateSplit[2]}.${dateSplit[1]}.${dateSplit[0]}`;
 
   return (
-    <div className={`flex gantt-row px-2.5 py-2 border-b border-slate-100 ${rowBg} h-[85px] items-center text-xs group`}>
+    <div className={`relative flex gantt-row px-2 sm:px-2.5 py-1.5 border-b border-slate-100 ${rowBg} h-[85px] items-center text-xs group`}>
       {/* Status Checkbox */}
-      <div className="w-8 shrink-0 flex justify-center">
+      <div className="w-6 sm:w-8 shrink-0 flex justify-center">
         <input
           type="checkbox"
           checked={isCompleted}
           onChange={() => onToggleStatus(task.id, task.status)}
           className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+          title={hasSubtasks ? `Task has ${subtasks.length} subtasks (${completionPct}% done). Click to toggle all.` : 'Toggle task completion'}
         />
       </div>
 
       {/* Task Info */}
-      <div className="flex-1 px-2 overflow-hidden h-full flex flex-col justify-center">
+      <div className="flex-1 px-1.5 sm:px-2 overflow-hidden h-full flex flex-col justify-center">
         <div className="flex items-center gap-1.5 mb-0.5">
-          <span className={`text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-0.2 rounded ${task.style?.light || 'bg-slate-100'} ${task.style?.text || 'text-slate-700'}`}>
+          <span className={`text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-0.2 rounded truncate max-w-[130px] sm:max-w-none ${task.style?.light || 'bg-slate-100'} ${task.style?.text || 'text-slate-700'}`}>
             {task.wp}
           </span>
           {task.priority === 'HIGH' && (
@@ -414,15 +432,38 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
           {task.activity}
         </div>
 
-        <div className="text-[9px] text-slate-500 mt-1 truncate" title={`Lead: ${task.lead} | Support: ${task.support}`}>
-          <span className="font-semibold text-slate-400">Lead:</span> <span className="text-slate-700 font-bold">{task.lead}</span>
-          <span className="mx-1 text-slate-300">|</span>
-          <span className="font-semibold text-slate-400">Support:</span> {task.support || 'None'}
-        </div>
+        {/* Subtask level bar / quick pill underneath title */}
+        {hasSubtasks ? (
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="w-12 sm:w-16 bg-slate-200 h-1.5 rounded-full overflow-hidden shrink-0">
+              <div
+                className={`h-full transition-all duration-300 ${
+                  isOverdue ? 'bg-red-500' : isCompleted ? 'bg-emerald-500' : 'bg-blue-600'
+                }`}
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+            <span className={`text-[9px] font-extrabold tracking-tight ${isOverdue ? 'text-red-600' : 'text-slate-600'}`}>
+              {completedSubtasksCount}/{subtasks.length} ({completionPct}%)
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowSubtasksFlyout(prev => !prev)}
+              className="text-[9px] font-bold text-blue-600 hover:text-blue-800 ml-auto flex items-center gap-0.5 cursor-pointer underline decoration-dotted"
+            >
+              {showSubtasksFlyout ? 'Hide' : `${subtasks.length} Sub-tasks`}
+            </button>
+          </div>
+        ) : (
+          <div className="text-[9px] text-slate-500 mt-0.5 truncate" title={`Lead: ${task.lead} | Support: ${task.support}`}>
+            <span className="font-semibold text-slate-400">Lead:</span> <span className="text-slate-700 font-bold">{task.lead}</span>
+            <span className="mx-1 text-slate-300">|</span>
+            <span className="font-semibold text-slate-400">Support:</span> {task.support || 'None'}
+          </div>
+        )}
       </div>
 
-      {/* Deadline — small themed pill behind the date/status so it stays
-          legible against the photo showing through the row background. */}
+      {/* Deadline */}
       <div className="hidden sm:block w-20 shrink-0 px-1 text-right text-[11px] font-bold mono">
         <span
           className={`inline-block px-1.5 py-0.5 rounded ${
@@ -443,7 +484,7 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="flex w-14 sm:w-16 shrink-0 items-center justify-center gap-1 opacity-90 sm:opacity-75 group-hover:opacity-100">
+      <div className="flex w-14 sm:w-16 shrink-0 items-center justify-center gap-0.5 opacity-90 sm:opacity-75 group-hover:opacity-100">
         <button
           type="button"
           onClick={(e) => {
@@ -451,7 +492,7 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
             onEdit(task);
           }}
           className="p-1.5 hover:bg-slate-200 text-slate-500 hover:text-slate-900 rounded transition-colors cursor-pointer"
-          title="Edit WBS Task"
+          title="Edit Task & Sub-tasks"
           aria-label="Edit Task"
         >
           <Edit3 className="w-3.5 h-3.5" />
@@ -469,17 +510,81 @@ const TaskRowItem: React.FC<TaskRowItemProps> = ({
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* Interactive Sub-tasks Flyout / Dropdown */}
+      {showSubtasksFlyout && hasSubtasks && (
+        <div className="absolute top-[82px] left-2 right-2 sm:right-auto sm:w-80 bg-white rounded-xl shadow-xl border border-slate-300 p-3 z-50 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+              <ListChecks className="w-3.5 h-3.5 text-blue-600" />
+              <span>Sub-tasks ({completedSubtasksCount}/{subtasks.length} Done)</span>
+            </div>
+            <button
+              onClick={() => setShowSubtasksFlyout(false)}
+              className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5 custom-scrollbar">
+            {subtasks.map((st) => (
+              <div
+                key={st.id}
+                className={`flex items-start gap-2 p-1.5 rounded-lg border text-[11px] ${
+                  st.completed ? 'bg-emerald-50/70 border-emerald-200 text-slate-500' : 'bg-slate-50/70 border-slate-200 text-slate-800'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={st.completed}
+                  onChange={() => {
+                    if (onToggleSubtask) onToggleSubtask(task, st.id);
+                  }}
+                  className="w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer mt-0.5 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className={`font-semibold ${st.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                    {st.title}
+                  </div>
+                  {st.assignees && (
+                    <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                      <Users className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span className="font-semibold text-slate-600 truncate">{st.assignees}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-2 mt-2 border-t border-slate-100 flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSubtasksFlyout(false);
+                onEdit(task);
+              }}
+              className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+            >
+              <Edit3 className="w-3 h-3" />
+              Manage / Add in Modal
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-/* Component for individual Gantt Bar in Right Pane */
+/* Component for individual Gantt Bar in Right Pane with Completion Level Fill */
 interface GanttBarItemProps {
   task: WBSTask;
   viewStartMs: number;
   totalMs: number;
   simMs: number;
   simulationDate: string;
+  onEdit?: (task: WBSTask) => void;
 }
 
 const GanttBarItem: React.FC<GanttBarItemProps> = ({
@@ -487,9 +592,17 @@ const GanttBarItem: React.FC<GanttBarItemProps> = ({
   viewStartMs,
   totalMs,
   simMs,
-  simulationDate
+  simulationDate,
+  onEdit
 }) => {
-  const isCompleted = task.status === 'COMPLETED';
+  const subtasks = task.subtasks || [];
+  const hasSubtasks = subtasks.length > 0;
+  const completedSubtasksCount = subtasks.filter(s => s.completed).length;
+  const completionPct = hasSubtasks
+    ? Math.round((completedSubtasksCount / subtasks.length) * 100)
+    : (task.status === 'COMPLETED' ? 100 : 0);
+
+  const isCompleted = task.status === 'COMPLETED' || (hasSubtasks && completionPct === 100);
   const isOverdue = isTaskOverdue(task, simulationDate);
 
   let leftPct = ((task.startMs - viewStartMs) / totalMs) * 100;
@@ -504,30 +617,101 @@ const GanttBarItem: React.FC<GanttBarItemProps> = ({
   }
   if (widthPct < 0.5) widthPct = 0.5;
 
-  let barBg = `${task.style?.bg || 'bg-slate-500'} ${task.style?.border || 'border-slate-600'} border`;
-  let barText = 'text-white';
+  // Tooltip detailed breakdown
+  const tooltipLines = [
+    task.activity,
+    `Work Package: ${task.wp}`,
+    `Lead: ${task.lead} (Support: ${task.support || 'None'})`,
+    `Deadline: ${task.deadline}`,
+    `Status: ${isCompleted ? 'Completed' : isOverdue ? 'Overdue' : 'In Progress'}${hasSubtasks ? ` (${completionPct}% complete)` : ''}`,
+    hasSubtasks ? `\nSub-tasks Breakdown (${completedSubtasksCount}/${subtasks.length}):\n` + subtasks.map(s => `  ${s.completed ? '✓' : '○'} ${s.title}${s.assignees ? ` [${s.assignees}]` : ''}`).join('\n') : '',
+    task.notes ? `\nNotes: ${task.notes}` : ''
+  ].filter(Boolean).join('\n');
 
-  if (isCompleted) {
-    barBg = 'bg-emerald-50 border border-emerald-300 border-dashed opacity-85';
-    barText = 'text-emerald-800 font-semibold';
-  } else if (isOverdue) {
-    barBg = 'bg-rose-600 border-rose-700 border shadow-xs';
+  /* ========================================================================= */
+  /* COLOR AND FILL LEVEL ARCHITECTURE:                                        */
+  /* - If Overdue: Everything turns RED (outer red warning track), and the     */
+  /*   completion fill bar fills completionPct% with solid vivid crimson red.  */
+  /* - If Completed: Emerald solid bar (100%).                                 */
+  /* - If In Progress / Pending: Outer track shows package outline, and the    */
+  /*   inner fill level bar fills completionPct% with vibrant package color.   */
+  /* ========================================================================= */
+
+  let containerClasses = '';
+  let fillClasses = '';
+  let textClasses = 'text-white';
+
+  if (isOverdue) {
+    // Everything turns red, but still able to clearly see the bar fill level!
+    // Outer shell: Dark warning red track with bright red border
+    containerClasses = 'bg-red-950/85 border-2 border-red-600 shadow-md';
+    // Fill level: Solid bright vivid red
+    fillClasses = 'bg-red-600';
+    textClasses = 'text-white font-bold drop-shadow-xs';
+  } else if (isCompleted) {
+    // 100% Complete: Emerald theme
+    containerClasses = 'bg-emerald-600 border border-emerald-500 shadow-xs';
+    fillClasses = 'bg-emerald-500';
+    textClasses = 'text-white font-semibold drop-shadow-xs';
+  } else {
+    // Normal In-Progress / Pending task
+    // Outer shell: deep translucent container showing remaining pending portion
+    containerClasses = 'bg-slate-700/80 border border-slate-600 shadow-xs';
+    // Fill level: Work Package brand color
+    fillClasses = task.style?.bg || 'bg-blue-600';
+    textClasses = 'text-white font-medium drop-shadow-xs';
   }
 
   return (
     <div className="relative w-full h-[85px] border-b border-slate-100 gantt-row group">
       {widthPct > 0 && leftPct < 100 && (
         <div
-          className={`absolute top-4 bottom-4 rounded-md shadow-xs overflow-hidden flex items-center px-2.5 gantt-bar-wrapper cursor-pointer ${barBg}`}
-          style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '28px' }}
-          title={`${task.activity}\nWork Package: ${task.wp}\nLead: ${task.lead} (Support: ${task.support || 'None'})\nDeadline: ${task.deadline}\nStatus: ${isCompleted ? 'Completed' : isOverdue ? 'Overdue' : 'Pending'}${task.notes ? `\nNotes: ${task.notes}` : ''}`}
+          onClick={() => onEdit && onEdit(task)}
+          className={`absolute top-3.5 bottom-3.5 rounded-lg overflow-hidden flex items-center gantt-bar-wrapper cursor-pointer transition-all hover:scale-[1.008] hover:shadow-lg ${containerClasses}`}
+          style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '32px' }}
+          title={tooltipLines}
         >
-          {isCompleted && <Check className="w-3.5 h-3.5 text-emerald-600 mr-1.5 shrink-0" />}
-          {isOverdue && <AlertTriangle className="w-3.5 h-3.5 text-white mr-1.5 shrink-0 animate-pulse" />}
+          {/* Internal Completion Level Bar */}
+          <div
+            className={`absolute top-0 bottom-0 left-0 transition-all duration-500 ease-out ${fillClasses}`}
+            style={{ width: `${isCompleted ? 100 : completionPct}%` }}
+          />
 
-          <span className={`text-[9px] font-bold ${barText} truncate drop-shadow-xs tracking-wide`}>
-            {widthPct > 10 ? task.activity : ''}
-          </span>
+          {/* Pending zone subtle texture for overdue / in-progress tasks with subtasks */}
+          {hasSubtasks && completionPct < 100 && (
+            <div
+              className="absolute top-0 bottom-0 right-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.07)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.07)_50%,rgba(255,255,255,0.07)_75%,transparent_75%,transparent)] bg-[length:10px_10px] pointer-events-none"
+              style={{ width: `${100 - completionPct}%` }}
+            />
+          )}
+
+          {/* Foreground Content: Title, Badges, and Percentage Level */}
+          <div className="relative z-10 flex items-center justify-between w-full px-2.5 min-w-0">
+            <div className="flex items-center min-w-0 gap-1.5 flex-1 pr-1">
+              {isCompleted ? (
+                <Check className="w-3.5 h-3.5 text-white shrink-0 drop-shadow-xs" />
+              ) : isOverdue ? (
+                <AlertTriangle className="w-3.5 h-3.5 text-white shrink-0 animate-pulse drop-shadow-xs" />
+              ) : null}
+
+              <span className={`text-[9.5px] truncate tracking-wide ${textClasses}`}>
+                {widthPct > 8 ? task.activity : ''}
+              </span>
+            </div>
+
+            {/* Completion Percentage Badge / Subtasks pill */}
+            {hasSubtasks && widthPct > 16 && (
+              <span className={`shrink-0 ml-1 px-1.5 py-0.5 rounded text-[8.5px] font-black tracking-wide border shadow-2xs ${
+                isOverdue 
+                  ? 'bg-red-900/90 text-red-100 border-red-500' 
+                  : isCompleted 
+                  ? 'bg-emerald-700/80 text-emerald-100 border-emerald-400' 
+                  : 'bg-slate-900/70 text-slate-200 border-slate-600'
+              }`}>
+                {completedSubtasksCount}/{subtasks.length} • {completionPct}%
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

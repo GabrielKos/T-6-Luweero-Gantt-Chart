@@ -104,6 +104,43 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
       const startMs = data.startMs || (endMs - (dur * 24 * 60 * 60 * 1000));
       const wp = canonicalizeWorkPackage(data.wp || 'Business Case Development');
 
+      let subtasks = Array.isArray(data.subtasks) ? data.subtasks : [];
+      if (subtasks.length === 0 && normActivity.includes('corporate formation') && normActivity.includes('corporate architecture')) {
+        subtasks = [
+          {
+            id: `st_${id}_1`,
+            title: 'Market Survey of Consultants',
+            assignees: 'Gabriel and Druscillar',
+            completed: true,
+            createdAt: Date.now() - 86400000 * 5
+          },
+          {
+            id: `st_${id}_2`,
+            title: 'Evaluating the consultants',
+            assignees: 'Shibah and Owen',
+            completed: false,
+            createdAt: Date.now() - 86400000 * 3
+          },
+          {
+            id: `st_${id}_3`,
+            title: 'Consolidate Architecture Framework & Governance Proposal',
+            assignees: 'Morgan and Elizabeth',
+            completed: false,
+            createdAt: Date.now() - 86400000 * 1
+          }
+        ];
+        // Persist to doc so it's saved in Firestore
+        updateDoc(doc(db, COLLECTION_NAME, id), { subtasks }).catch(() => {});
+      }
+
+      let taskStatus = data.status || 'PENDING';
+      if (subtasks.length > 0) {
+        const allCompleted = subtasks.every((st: any) => st.completed);
+        if (allCompleted) {
+          taskStatus = 'COMPLETED';
+        }
+      }
+
       rawTaskList.push({
         id,
         wp,
@@ -113,13 +150,14 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
         deadline,
         startMs,
         endMs,
-        status: data.status || 'PENDING',
+        status: taskStatus,
         notes: data.notes || '',
         priority: data.priority || 'MEDIUM',
         durationDays: dur,
         updatedBy: data.updatedBy || 'Team Member',
         updatedAt: data.updatedAt || Date.now(),
-        style: getWorkPackageStyle(wp)
+        style: getWorkPackageStyle(wp),
+        subtasks
       });
     });
 
@@ -193,6 +231,7 @@ export async function seedDatabase() {
         durationDays: t.durationDays,
         priority: t.priority,
         notes: t.notes || '',
+        subtasks: t.subtasks || [],
         updatedBy: 'System Seed',
         updatedAt: Date.now()
       });
@@ -204,20 +243,78 @@ export async function seedDatabase() {
 /**
  * Toggle task status
  */
-export async function updateTaskStatus(taskId: string, newStatus: WBSTask['status'], userName: string) {
+export async function updateTaskStatus(taskId: string, newStatus: WBSTask['status'], userName: string, existingTask?: WBSTask) {
   try {
     const taskRef = doc(db, COLLECTION_NAME, taskId);
-    await updateDoc(taskRef, {
+    const updatePayload: any = {
       status: newStatus,
       updatedBy: userName,
       updatedAt: Date.now()
-    });
+    };
+
+    // If task has subtasks, keep subtasks aligned with main task status toggle
+    if (existingTask && existingTask.subtasks && existingTask.subtasks.length > 0) {
+      const isComplete = newStatus === 'COMPLETED';
+      updatePayload.subtasks = existingTask.subtasks.map(st => ({
+        ...st,
+        completed: isComplete
+      }));
+    }
+
+    await updateDoc(taskRef, updatePayload);
   } catch (e) {
     console.warn('updateTaskStatus error:', e);
   }
 
   // Non-blocking activity log
-  logActivity(taskId, 'Status update', `Changed status to ${newStatus}`, userName, newStatus === 'COMPLETED' ? 'COMPLETED' : 'STATUS_CHANGED').catch(() => {});
+  logActivity(taskId, existingTask?.activity || 'Status update', `Changed status to ${newStatus}`, userName, newStatus === 'COMPLETED' ? 'COMPLETED' : 'STATUS_CHANGED').catch(() => {});
+}
+
+/**
+ * Toggle a single subtask's completion status within a task
+ */
+export async function toggleSubtask(task: WBSTask, subtaskId: string, userName: string) {
+  if (!task.subtasks) return;
+  const updatedSubtasks = task.subtasks.map(st => {
+    if (st.id === subtaskId) {
+      return { ...st, completed: !st.completed };
+    }
+    return st;
+  });
+
+  const allCompleted = updatedSubtasks.length > 0 && updatedSubtasks.every(st => st.completed);
+  const anyCompleted = updatedSubtasks.some(st => st.completed);
+  let newStatus: WBSTask['status'] = task.status;
+  if (allCompleted) {
+    newStatus = 'COMPLETED';
+  } else if (anyCompleted || task.status === 'COMPLETED') {
+    newStatus = 'IN_PROGRESS';
+  }
+
+  const toggledSubtask = updatedSubtasks.find(s => s.id === subtaskId);
+  const actionText = toggledSubtask?.completed ? 'Completed' : 'Reopened';
+  const completedCount = updatedSubtasks.filter(s => s.completed).length;
+  const pct = Math.round((completedCount / updatedSubtasks.length) * 100);
+
+  try {
+    const taskRef = doc(db, COLLECTION_NAME, task.id);
+    await updateDoc(taskRef, {
+      subtasks: updatedSubtasks,
+      status: newStatus,
+      updatedBy: userName,
+      updatedAt: Date.now()
+    });
+
+    logActivity(
+      task.id, 
+      task.activity, 
+      `${actionText} subtask "${toggledSubtask?.title}" (${completedCount}/${updatedSubtasks.length} - ${pct}%)`, 
+      userName, 
+      'UPDATED'
+    ).catch(() => {});
+  } catch (err) {
+    console.warn('toggleSubtask error:', err);
+  }
 }
 
 /**
@@ -234,8 +331,20 @@ export async function saveTask(task: Partial<WBSTask> & { id?: string }, userNam
   const startMs = task.startMs || (end.getTime() - (dur * 24 * 60 * 60 * 1000));
   const finalWp = canonicalizeWorkPackage(task.wp || 'Business Case Development');
   const finalActivity = (task.activity || 'Untitled Task').trim();
+  const subtasks = task.subtasks || [];
 
-  const taskData = {
+  // Determine effective status based on subtasks
+  let status = task.status || 'PENDING';
+  if (subtasks.length > 0) {
+    const allCompleted = subtasks.every(st => st.completed);
+    if (allCompleted) {
+      status = 'COMPLETED';
+    } else if (status === 'COMPLETED') {
+      status = 'IN_PROGRESS';
+    }
+  }
+
+  const taskData: any = {
     wp: finalWp,
     activity: finalActivity,
     lead: task.lead || 'Shibah',
@@ -243,10 +352,11 @@ export async function saveTask(task: Partial<WBSTask> & { id?: string }, userNam
     deadline,
     startMs,
     endMs: end.getTime(),
-    status: task.status || 'PENDING',
+    status,
     durationDays: dur,
     priority: task.priority || 'MEDIUM',
     notes: task.notes || '',
+    subtasks,
     updatedBy: userName,
     updatedAt: Date.now()
   };
@@ -358,6 +468,7 @@ export async function restoreTask(task: WBSTask, userName: string) {
       durationDays: task.durationDays || 14,
       priority: task.priority || 'MEDIUM',
       notes: task.notes || '',
+      subtasks: task.subtasks || [],
       updatedBy: userName,
       updatedAt: Date.now()
     });

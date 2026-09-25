@@ -74,10 +74,36 @@ export function formatDate(dateString: string): string {
 }
 
 /**
+ * Calculates percentage completion for a task (0 to 100).
+ * If task has subtasks, completion is defined by completedSubtasks / totalSubtasks.
+ * Otherwise, status === 'COMPLETED' is 100%, else 0%.
+ */
+export function getTaskCompletionPct(task: WBSTask): number {
+  if (task.subtasks && task.subtasks.length > 0) {
+    const done = task.subtasks.filter(s => s.completed).length;
+    return Math.round((done / task.subtasks.length) * 100);
+  }
+  return task.status === 'COMPLETED' ? 100 : 0;
+}
+
+export function getTaskSubtaskStats(task: WBSTask): { total: number; completed: number; pct: number; hasSubtasks: boolean } {
+  const subtasks = task.subtasks || [];
+  const completed = subtasks.filter(s => s.completed).length;
+  const hasSubtasks = subtasks.length > 0;
+  const pct = hasSubtasks 
+    ? Math.round((completed / subtasks.length) * 100) 
+    : (task.status === 'COMPLETED' ? 100 : 0);
+  return { total: subtasks.length, completed, pct, hasSubtasks };
+}
+
+/**
  * Checks whether a task is overdue relative to a given simulation date (YYYY-MM-DD)
  */
 export function isTaskOverdue(task: WBSTask, simulationDate: string): boolean {
   if (task.status === 'COMPLETED') return false;
+  if (task.subtasks && task.subtasks.length > 0 && task.subtasks.every(s => s.completed)) {
+    return false;
+  }
   if (!task.deadline) return false;
   if (task.deadline < simulationDate) return true;
   const simMs = dayMs(simulationDate);
@@ -91,6 +117,9 @@ export function isTaskOverdue(task: WBSTask, simulationDate: string): boolean {
  */
 export function effectiveStatus(task: WBSTask, simDateOrMs: string | number): EffectiveStatus {
   if (task.status === 'COMPLETED') return 'COMPLETED';
+  if (task.subtasks && task.subtasks.length > 0 && task.subtasks.every(s => s.completed)) {
+    return 'COMPLETED';
+  }
 
   let simDate = '';
   let simMs = 0;
@@ -105,7 +134,10 @@ export function effectiveStatus(task: WBSTask, simDateOrMs: string | number): Ef
 
   if (task.deadline && task.deadline < simDate) return 'OVERDUE';
   if (task.endMs < simMs) return 'OVERDUE';
-  if (task.startMs <= simMs) return 'IN_PROGRESS';
+
+  // If any subtask is completed or task is within time window
+  const anySubtaskDone = task.subtasks && task.subtasks.some(s => s.completed);
+  if (anySubtaskDone || task.startMs <= simMs) return 'IN_PROGRESS';
   return 'PENDING';
 }
 
@@ -167,7 +199,7 @@ export function packageStats(tasks: WBSTask[], simDateOrMs: string | number): Pa
         wp,
         color: wpHex(wp),
         ...counts,
-        pct: counts.total ? Math.round((counts.completed / counts.total) * 100) : 0,
+        pct: counts.total ? Math.round(items.reduce((acc, t) => acc + getTaskCompletionPct(t), 0) / counts.total) : 0,
         share: Math.round((counts.total / total) * 1000) / 10,
         deadline: items.reduce((acc, t) => (t.deadline > acc ? t.deadline : acc), items[0].deadline),
         leads: Array.from(leadCounts.entries())
@@ -219,7 +251,7 @@ export function leadOfficerStats(tasks: WBSTask[], simDateOrMs: string | number)
       inProgress: c.inProgress,
       pending: c.pending,
       overdue: c.overdue,
-      pct: c.total ? Math.round((c.completed / c.total) * 100) : 0,
+      pct: c.total ? Math.round(items.reduce((acc, t) => acc + getTaskCompletionPct(t), 0) / c.total) : 0,
       isLeader: true
     };
   }).sort((a, b) => b.total - a.total);
@@ -258,7 +290,7 @@ export function supportOfficerStats(tasks: WBSTask[], simDateOrMs: string | numb
       inProgress: c.inProgress,
       pending: c.pending,
       overdue: c.overdue,
-      pct: c.total ? Math.round((c.completed / c.total) * 100) : 0,
+      pct: c.total ? Math.round(items.reduce((acc, t) => acc + getTaskCompletionPct(t), 0) / c.total) : 0,
       isLeader: false
     };
   }).sort((a, b) => b.total - a.total);
@@ -328,7 +360,7 @@ export function buildSummary(tasks: WBSTask[], simulationDate: string): Progress
 
   return {
     counts,
-    pct: counts.total ? Math.round((counts.completed / counts.total) * 100) : 0,
+    pct: counts.total ? Math.round(tasks.reduce((acc, t) => acc + getTaskCompletionPct(t), 0) / counts.total) : 0,
     daysToCop: daysBetween(simulationDate, COP_TARGET),
     elapsedPct: Math.max(0, Math.min(100, Math.round((elapsed / totalSpan) * 100))),
     packages: packageStats(tasks, simulationDate),

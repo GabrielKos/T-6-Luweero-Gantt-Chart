@@ -16,6 +16,7 @@
         "status": { "type": "string" },
         "notes": { "type": "string" },
         "priority": { "type": "string" },
+        "subtasks": { "type": "array" },
         "updatedBy": { "type": "string" },
         "updatedAt": { "type": "number" }
       },

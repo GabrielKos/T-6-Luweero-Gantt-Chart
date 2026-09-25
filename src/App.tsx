@@ -11,6 +11,7 @@ import {
   subscribeToLogs, 
   listenToAuth, 
   updateTaskStatus, 
+  toggleSubtask,
   saveTask, 
   deleteTask,
   restoreTask
@@ -316,15 +317,56 @@ export default function App() {
   const handleToggleTaskStatus = async (taskId: string, currentStatus: WBSTask['status']) => {
     const nextStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
     const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
+    const existingTask = tasks.find(t => t.id === taskId);
     
     // Optimistically update React state immediately (0ms UI lag)
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: nextStatus, updatedAt: Date.now(), updatedBy: activeUserName } : t));
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        const isComplete = nextStatus === 'COMPLETED';
+        const updatedSubtasks = t.subtasks?.map(st => ({ ...st, completed: isComplete })) || [];
+        return { 
+          ...t, 
+          status: nextStatus, 
+          subtasks: updatedSubtasks,
+          updatedAt: Date.now(), 
+          updatedBy: activeUserName 
+        };
+      }
+      return t;
+    }));
 
     // Asynchronously persist to Firestore
     try {
-      await updateTaskStatus(taskId, nextStatus, activeUserName);
+      await updateTaskStatus(taskId, nextStatus, activeUserName, existingTask);
     } catch (err) {
       console.error('Update status error:', err);
+    }
+  };
+
+  const handleToggleSubtask = async (task: WBSTask, subtaskId: string) => {
+    const activeUserName = user?.displayName || localStorage.getItem('kmc_user_display_name') || 'Team Member';
+    const currentSubtasks = task.subtasks || [];
+    const updatedSubtasks = currentSubtasks.map(st => st.id === subtaskId ? { ...st, completed: !st.completed } : st);
+    const allDone = updatedSubtasks.length > 0 && updatedSubtasks.every(st => st.completed);
+    const anyDone = updatedSubtasks.some(st => st.completed);
+    let nextStatus: WBSTask['status'] = task.status;
+    if (allDone) nextStatus = 'COMPLETED';
+    else if (anyDone || task.status === 'COMPLETED') nextStatus = 'IN_PROGRESS';
+
+    // Optimistically update React state
+    setTasks(prev => prev.map(t => t.id === task.id ? { 
+      ...t, 
+      subtasks: updatedSubtasks, 
+      status: nextStatus, 
+      updatedAt: Date.now(), 
+      updatedBy: activeUserName 
+    } : t));
+
+    // Persist to Firestore
+    try {
+      await toggleSubtask(task, subtaskId, activeUserName);
+    } catch (err) {
+      console.error('Toggle subtask error:', err);
     }
   };
 
@@ -338,6 +380,7 @@ export default function App() {
     const startMs = taskData.startMs || (end.getTime() - (dur * 24 * 60 * 60 * 1000));
     const wp = canonicalizeWorkPackage(taskData.wp || 'Business Case Development');
     const activity = (taskData.activity || 'Untitled Task').trim();
+    const subtasks = taskData.subtasks || [];
 
     const updatedTask: WBSTask = {
       id: taskId,
@@ -352,6 +395,7 @@ export default function App() {
       durationDays: dur,
       priority: taskData.priority || 'MEDIUM',
       notes: taskData.notes || '',
+      subtasks,
       updatedBy: activeUserName,
       updatedAt: Date.now(),
       style: getWorkPackageStyle(wp)
@@ -536,6 +580,7 @@ export default function App() {
               simulationDate={simulationDate}
               layout={filters.layout}
               onToggleTaskStatus={handleToggleTaskStatus}
+              onToggleSubtask={handleToggleSubtask}
               onEditTask={handleOpenEditTask}
               onDeleteTask={handleDeleteTask}
             />

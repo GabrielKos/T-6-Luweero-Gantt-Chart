@@ -1,4 +1,4 @@
-import { WBSTask, TaskStatus, TaskPriority } from '../types';
+import { WBSTask, TaskStatus, TaskPriority, WBSSubtask } from '../types';
 import { 
   RAW_INITIAL_TASKS, 
   RawTaskItem, 
@@ -397,6 +397,30 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
   const latestUpdateAt = latestTask.updatedAt || Date.now();
   const latestUpdateBy = latestTask.updatedBy || 'Team Member';
 
+  // 8b. Merge subtasks from cluster without losing any
+  const combinedSubtasks: WBSSubtask[] = [];
+  const seenSubtaskKeys = new Set<string>();
+  for (const t of cluster) {
+    if (t.subtasks && Array.isArray(t.subtasks)) {
+      for (const st of t.subtasks) {
+        const key = st.id || st.title.toLowerCase().trim();
+        if (!seenSubtaskKeys.has(key)) {
+          seenSubtaskKeys.add(key);
+          combinedSubtasks.push(st);
+        }
+      }
+    }
+  }
+
+  // If task has subtasks and all subtasks are complete, ensure status reflects COMPLETED
+  let finalStatus = resolvedStatus;
+  if (combinedSubtasks.length > 0) {
+    const allDone = combinedSubtasks.every(st => st.completed);
+    if (allDone) {
+      finalStatus = 'COMPLETED';
+    }
+  }
+
   // 9. Pick the primary document ID
   const primaryDoc = cluster.find(t => /^T\d+$/.test(t.id)) ||
                      latestTask ||
@@ -415,14 +439,15 @@ export function mergeTaskCluster(cluster: WBSTask[]): {
     deadline: finalDeadline,
     startMs: finalStartMs,
     endMs: finalEndMs,
-    status: resolvedStatus,
+    status: finalStatus,
     durationDays: finalDuration,
     priority: resolvedPriority,
     notes: combinedNotes,
     updatedBy: latestUpdateBy,
     updatedAt: latestUpdateAt,
     style: finalStyle,
-    mergedDocIds: cluster.map(c => c.id)
+    mergedDocIds: cluster.map(c => c.id),
+    subtasks: combinedSubtasks
   };
 
   return {
@@ -519,6 +544,7 @@ export function deduplicateAndMergeTasks(tasks: WBSTask[]): {
           durationDays: merged.durationDays,
           priority: merged.priority,
           notes: merged.notes,
+          subtasks: merged.subtasks || [],
           updatedBy: merged.updatedBy,
           updatedAt: merged.updatedAt
         }
