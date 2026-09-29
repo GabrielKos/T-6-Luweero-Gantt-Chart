@@ -22,7 +22,7 @@ const COMMON_OFFICERS = [
   'Donald',
   'Malik',
   'Mukama',
-  'Renorah',
+  'Joel',
   'Rodney'
 ];
 
@@ -281,7 +281,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <option value="Druscilar">Druscilar (Market Research)</option>
                   <option value="Malik">Malik (Geopolitical & Sourcing)</option>
                   <option value="Mukama">Mukama (Technical Analyst)</option>
-                  <option value="Renorah">Renorah (Plant Layout)</option>
+                  <option value="Joel">Joel (Plant Layout - Joel Mulwana)</option>
                   <option value="Rodney">Rodney (Process Flow)</option>
                   <option value="Entire Project Team">Entire Project Team</option>
                 </optgroup>
@@ -295,7 +295,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="e.g., Morgan, Gabriel, Renorah"
+                placeholder="e.g., Morgan, Gabriel, Joel"
                 value={support}
                 onChange={(e) => setSupport(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs font-medium rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"

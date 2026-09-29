@@ -20,6 +20,7 @@ import {
   updateDoc, 
   setDoc, 
   deleteDoc,
+  getDocs,
   query,
   orderBy,
   limit,
@@ -72,14 +73,7 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
     if (!latestTasksSnapshot) return;
 
     if (latestTasksSnapshot.empty) {
-      if (deletedTaskIdsCache.size === 0) {
-        // Only brand-new uninitialized empty database
-        const initialSeeds = generateSeedTasks();
-        onUpdate(initialSeeds);
-        seedDatabase().catch(err => console.warn('Seed error:', err));
-      } else {
-        onUpdate([]);
-      }
+      onUpdate([]);
       return;
     }
 
@@ -181,6 +175,12 @@ export function subscribeToTasks(onUpdate: (tasks: WBSTask[]) => void, onError?:
  */
 export async function seedDatabase() {
   const tasksCol = collection(db, COLLECTION_NAME);
+  // Safety guard: Never overwrite an existing database
+  const existingSnap = await getDocs(tasksCol);
+  if (!existingSnap.empty) {
+    console.warn('seedDatabase aborted: Database already contains data. Preserving all records.');
+    return;
+  }
   const seedData = generateSeedTasks();
   
   const CHUNK_SIZE = 200;

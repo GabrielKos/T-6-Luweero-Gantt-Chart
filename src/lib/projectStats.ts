@@ -234,6 +234,7 @@ export const ALL_CANONICAL_OFFICERS = [
   'Gabriel',
   'Donald',
   'Druscilar',
+  'Joel',
   'Malik',
   'Mukama',
   'Renorah',

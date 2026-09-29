@@ -157,6 +157,7 @@ export default function App() {
       'Gabriel',
       'Donald',
       'Druscilar',
+      'Joel',
       'Malik',
       'Mukama',
       'Renorah',
