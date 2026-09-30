@@ -31,6 +31,7 @@ import { UndoToast } from './components/UndoToast';
 import { ExportPdfModal, ExportSectionChoice } from './components/ExportPdfModal';
 import { CANONICAL_WORK_PACKAGES, canonicalizeWorkPackage, getWorkPackageStyle } from './data/initialTasks';
 import { PLANT_BACKGROUND } from './assets/plantBackground';
+import { initBrandingSync } from './lib/branding';
 
 export default function App() {
   const [tasks, setTasks] = useState<WBSTask[]>([]);
@@ -139,6 +140,11 @@ export default function App() {
       }
     );
     return () => unsubscribeLogs();
+  }, []);
+
+  // 4. Real-time Branding Logo Sync (localStorage & Firestore)
+  useEffect(() => {
+    return initBrandingSync();
   }, []);
 
   // Computed filter options

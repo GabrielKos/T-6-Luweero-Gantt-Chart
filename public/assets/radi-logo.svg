@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 520" width="100%" height="100%" style="display:block; shape-rendering: geometricPrecision; text-rendering: geometricPrecision;">
+  <defs>
+    <linearGradient id="radiGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#44C455" />
+      <stop offset="50%" stop-color="#34B245" />
+      <stop offset="100%" stop-color="#1E8E2F" />
+    </linearGradient>
+    <linearGradient id="radiNavy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#183D6E" />
+      <stop offset="100%" stop-color="#082142" />
+    </linearGradient>
+  </defs>
+
+  <!-- ==================== TOP 'R' EMBLEM ==================== -->
+  <g id="logo-mark">
+    <!-- Green Upper Loop & Shoulder of 'R' -->
+    <path d="M 235 25 
+             C 325 25, 395 72, 395 165 
+             C 395 235, 335 285, 268 296 
+             L 236 232 
+             C 285 220, 318 190, 318 158 
+             C 318 108, 276 86, 218 86 
+             L 182 86 
+             L 204 25 
+             Z" 
+          fill="url(#radiGreen)" />
+
+    <!-- Deep Navy Left Upper Block of 'R' (behind lightning) -->
+    <polygon points="128,125 186,125 158,195 102,195" fill="url(#radiNavy)" />
+
+    <!-- Deep Navy Left Lower Leg / Base of 'R' -->
+    <polygon points="76,325 148,325 204,185 158,185" fill="url(#radiNavy)" />
+
+    <!-- Sharp White Lightning Bolt Cutting through Left Leg -->
+    <polygon points="174,25 236,25 178,145 234,145 132,325 160,205 116,205" fill="#FFFFFF" />
+
+    <!-- Deep Navy Diagonal Right Leg of 'R' (Housing the Battery) -->
+    <path d="M 230 220 
+             L 282 220 
+             L 396 325 
+             L 326 325 
+             L 288 290 
+             L 230 220 
+             Z" 
+          fill="url(#radiNavy)" />
+
+    <!-- Integrated EV Battery Icon on Right Leg -->
+    <g transform="translate(242, 222)">
+      <!-- Terminal Cap -->
+      <path d="M 33 0 L 47 0 C 50 0, 52 2, 52 5 L 52 8 L 28 8 L 28 5 C 28 2, 30 0, 33 0 Z" fill="#FFFFFF" />
+      
+      <!-- Outer Battery Housing / Border -->
+      <rect x="14" y="8" width="52" height="96" rx="15" ry="15" fill="#0A2345" stroke="#FFFFFF" stroke-width="7" />
+      
+      <!-- 4 Green Energy Indicator Bars -->
+      <rect x="23" y="24" width="34" height="11" rx="3.5" fill="#35B848" />
+      <rect x="23" y="42" width="34" height="11" rx="3.5" fill="#35B848" />
+      <rect x="23" y="60" width="34" height="11" rx="3.5" fill="#35B848" />
+      <rect x="23" y="78" width="34" height="11" rx="3.5" fill="#35B848" />
+    </g>
+  </g>
+
+  <!-- ==================== TYPOGRAPHY: RADI ==================== -->
+  <g id="typography-radi" transform="translate(0, 362)">
+    <!-- 'R': Modern geometric with top-left chamfer -->
+    <path d="M 32 88 L 56 88 L 56 55 C 60 55, 66 55, 72 55 C 87 55, 98 46, 98 30 C 98 15, 87 6, 70 6 L 42 6 L 32 16 L 32 88 Z 
+             M 56 22 L 68 22 C 75 22, 80 25, 80 30 C 80 35, 75 38, 68 38 L 56 38 Z
+             M 68 53 L 95 88 L 115 88 L 84 51 C 79 53, 73 53, 68 53 Z" 
+          fill="#082245" />
+
+    <!-- 'A': Modern vibrant green chevron / upward arrowhead -->
+    <path d="M 166 6 L 126 88 L 152 88 L 166 59 L 186 59 L 200 88 L 226 88 L 186 6 Z 
+             M 176 34 L 181 44 L 171 44 Z" 
+          fill="#2AA33D" />
+
+    <!-- 'D': Modern geometric with top-left chamfer -->
+    <path d="M 238 6 L 274 6 C 304 6, 324 24, 324 47 C 324 70, 304 88, 274 88 L 238 88 L 238 18 L 248 6 Z 
+             M 262 24 L 271 24 C 289 24, 298 34, 298 47 C 298 60, 289 70, 271 70 L 262 70 Z" 
+          fill="#082245" />
+
+    <!-- 'I': Modern geometric pillar -->
+    <rect x="342" y="6" width="23" height="82" rx="2" fill="#082245" />
+  </g>
+
+  <!-- ==================== SUB-HEADING: — ENERGY SYSTEMS LTD — ==================== -->
+  <g id="typography-energy" transform="translate(0, 474)">
+    <!-- Left Green Bar -->
+    <rect x="15" y="7" width="28" height="5" rx="2.5" fill="#2AA33D" />
+
+    <!-- Text -->
+    <text x="245" y="12" 
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Montserrat', 'Inter', 'Segoe UI', sans-serif" 
+          font-size="16" 
+          font-weight="900" 
+          letter-spacing="5" 
+          fill="#082245" 
+          text-anchor="middle">
+      ENERGY SYSTEMS LTD
+    </text>
+
+    <!-- Right Green Bar -->
+    <rect x="447" y="7" width="28" height="5" rx="2.5" fill="#2AA33D" />
+  </g>
+
+  <!-- ==================== TAGLINE: POWERING THE FUTURE ==================== -->
+  <text x="245" y="508" 
+        font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Montserrat', 'Inter', 'Segoe UI', sans-serif" 
+        font-size="12" 
+        font-weight="700" 
+        letter-spacing="6" 
+        fill="#3DB350" 
+        text-anchor="middle">
+    POWERING THE FUTURE
+  </text>
+</svg>

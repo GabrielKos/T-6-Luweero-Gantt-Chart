@@ -63,18 +63,18 @@ export const Header: React.FC<HeaderProps> = ({
       className="text-white shrink-0 border-b border-slate-800/70 z-30 relative"
       style={{ background: 'linear-gradient(180deg, rgba(2,6,23,0.12) 0%, rgba(2,6,23,0.5) 100%)' }}
     >
-      <div className="h-[52px] flex items-center">
+      <div className="h-[74px] sm:h-[80px] flex items-center">
 
         {/* Brand: Always docked and pinned on the left */}
-        <div className="flex items-center gap-2.5 shrink-0 pl-2.5 sm:pl-4 pr-2 z-10">
-          <div className="bg-white rounded-full pl-2.5 pr-3 flex items-center h-9 shadow-sm shrink-0">
-            <RadiLogo className="h-5" />
+        <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 pl-2.5 sm:pl-4 pr-2 z-10">
+          <div className="bg-white rounded-2xl p-1.5 sm:p-2 flex items-center justify-center h-[60px] w-[60px] sm:h-[68px] sm:w-[68px] shadow-md border border-slate-200/90 shrink-0">
+            <RadiLogo className="h-full w-full object-contain" />
           </div>
           <div className="hidden lg:block leading-tight min-w-0">
-            <div className="text-[12.5px] font-bold tracking-tight text-white truncate max-w-[230px] xl:max-w-none">
+            <div className="text-[13px] sm:text-[13.5px] font-bold tracking-tight text-white truncate max-w-[240px] xl:max-w-none">
               Radi Energy Solutions Battery Plant Master WorkPlan
             </div>
-            <div className="text-[9.5px] text-slate-400 font-medium tracking-wide truncate">
+            <div className="text-[9.5px] sm:text-[10px] text-slate-400 font-medium tracking-wide truncate mt-0.5">
               Radi Energy Solutions · Master WorkPlan · FY26/27
             </div>
           </div>

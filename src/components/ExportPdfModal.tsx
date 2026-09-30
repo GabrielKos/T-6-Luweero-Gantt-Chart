@@ -11,6 +11,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { ViewOption } from '../types';
+import { RadiLogo } from './RadiLogo';
 
 export type ExportSectionChoice = 'all' | 'matrix' | 'gantt';
 
@@ -73,16 +74,21 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-1 bg-blue-600/30 text-blue-400 rounded border border-blue-500/40">
-                <FileDown className="w-4 h-4" />
-              </span>
-              <h3 className="text-base font-bold text-white">Export PDF Report</h3>
+          <div className="flex items-center gap-3">
+            <div className="bg-white rounded-xl p-1 flex items-center justify-center h-10 w-10 shadow-sm border border-slate-700/60 shrink-0">
+              <RadiLogo className="h-full w-full object-contain" allowUpload={false} />
             </div>
-            <p className="text-xs text-slate-400 mt-0.5 font-medium">
-              Radi Energy Solutions · Battery Plant Master WorkPlan
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1 bg-blue-600/30 text-blue-400 rounded border border-blue-500/40">
+                  <FileDown className="w-3.5 h-3.5" />
+                </span>
+                <h3 className="text-base font-bold text-white">Export PDF Report</h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                Radi Energy Solutions · Battery Plant Master WorkPlan
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}

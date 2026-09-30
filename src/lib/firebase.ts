@@ -604,6 +604,41 @@ export async function registerWithEmail(email: string, pass: string, name: strin
   };
 }
 
+/**
+ * Save custom uploaded logo to Firestore system_config so all devices see the authentic logo
+ */
+export async function saveBrandingLogo(logoDataUrl: string): Promise<void> {
+  try {
+    const brandingRef = doc(db, 'system_config', 'branding');
+    await setDoc(brandingRef, { logoDataUrl, updatedAt: Date.now() }, { merge: true });
+  } catch (err) {
+    console.warn('Error saving branding logo to Firestore:', err);
+  }
+}
+
+/**
+ * Real-time subscription to the custom branding logo
+ */
+export function subscribeToBrandingLogo(callback: (logoDataUrl: string | null) => void): () => void {
+  try {
+    const brandingRef = doc(db, 'system_config', 'branding');
+    return onSnapshot(brandingRef, (snap) => {
+      if (snap.exists() && snap.data().logoDataUrl) {
+        callback(snap.data().logoDataUrl);
+      } else {
+        callback(null);
+      }
+    }, (err) => {
+      console.warn('Branding subscription error:', err);
+      callback(null);
+    });
+  } catch (err) {
+    console.warn('subscribeToBrandingLogo setup error:', err);
+    return () => {};
+  }
+}
+
+
 export async function logoutUser(): Promise<void> {
   await signOut(auth);
 }

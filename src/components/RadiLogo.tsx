@@ -1,41 +1,99 @@
-import React, { useState } from 'react';
-import { RADI_LOGO } from '../assets/plantBackground';
+import React, { useState, useEffect, useRef } from 'react';
+import { getActiveLogo, saveActiveLogo, subscribeToLogo } from '../lib/branding';
+import { Upload, Check } from 'lucide-react';
 
 interface RadiLogoProps {
   className?: string;
+  allowUpload?: boolean;
 }
 
 /**
- * Radi Energy Solutions logo lockup — rendered from high-resolution base64 data URI
- * with instant load time and inline vector SVG fallback.
+ * Radi Energy Systems Ltd logo component.
+ *
+ * 1. Default: High-resolution authentic master lockup (1000x1100) with true brand typography and emblem.
+ * 2. Instant Upload: Users can click directly on the badge to upload their exact "Radi Logo.jpeg" from disk.
+ * 3. Real-Time Sync: Uploaded custom logo persists in localStorage and syncs across devices via Firestore.
  */
-export const RadiLogo: React.FC<RadiLogoProps> = ({ className = 'h-8' }) => {
-  const [hasError, setHasError] = useState(false);
+export const RadiLogo: React.FC<RadiLogoProps> = ({ className = 'h-full w-full', allowUpload = true }) => {
+  const [logoSrc, setLogoSrc] = useState<string>(getActiveLogo);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (hasError) {
-    return (
-      <div className={`flex items-center gap-1.5 shrink-0 select-none ${className}`}>
-        <div className="h-full aspect-square bg-gradient-to-tr from-amber-500 to-yellow-400 rounded-md p-1 flex items-center justify-center shadow-xs">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-full h-full text-white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" fillOpacity="0.3" />
-          </svg>
-        </div>
-        <div className="flex flex-col justify-center leading-none">
-          <span className="text-[11px] font-black tracking-tight text-slate-900 uppercase">RADI</span>
-          <span className="text-[7px] font-bold tracking-wider text-amber-600 uppercase">ENERGY SOLUTIONS</span>
-        </div>
-      </div>
-    );
-  }
+  // Subscribe to shared branding logo in localStorage and Firestore
+  useEffect(() => {
+    const unsubscribe = subscribeToLogo((newLogo) => {
+      if (newLogo) {
+        setLogoSrc(newLogo);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Read the user's authentic local file directly
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setLogoSrc(dataUrl);
+        await saveActiveLogo(dataUrl);
+        setUploadSuccess(true);
+        setTimeout(() => setUploadSuccess(false), 3000);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerUpload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    fileInputRef.current?.click();
+  };
 
   return (
-    <img
-      src={RADI_LOGO}
-      alt="Radi Energy Solutions"
-      className={`h-full w-auto object-contain ${className}`}
-      loading="eager"
-      onError={() => setHasError(true)}
-    />
+    <div
+      className={`relative group flex items-center justify-center select-none ${className}`}
+      title="Click or hover to upload custom Radi Logo file directly from your computer"
+    >
+      <img
+        src={logoSrc}
+        alt="Radi Energy Systems Ltd - Powering the Future"
+        className="h-full w-full object-contain pointer-events-none transition-transform duration-200 group-hover:scale-[1.02]"
+        loading="eager"
+        decoding="sync"
+      />
+
+      {allowUpload && (
+        <>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+            className="hidden"
+          />
+
+          {/* Quick upload hover trigger */}
+          <button
+            type="button"
+            onClick={triggerUpload}
+            className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center p-1 text-white backdrop-blur-[1px] cursor-pointer"
+            aria-label="Upload original Radi Logo from computer"
+            title="Upload original Radi Logo file"
+          >
+            {uploadSuccess ? (
+              <Check className="w-4 h-4 text-emerald-400 animate-bounce" />
+            ) : (
+              <Upload className="w-4 h-4 text-white" />
+            )}
+            <span className="text-[7.5px] font-bold text-center leading-tight mt-0.5 text-white/90">
+              {uploadSuccess ? 'Updated!' : 'Upload'}
+            </span>
+          </button>
+        </>
+      )}
+    </div>
   );
 };
-

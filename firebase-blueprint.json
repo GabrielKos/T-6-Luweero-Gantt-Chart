@@ -35,6 +35,32 @@
         "timestamp": { "type": "number" }
       },
       "required": ["taskId", "action", "timestamp"]
+    },
+    "system_config": {
+      "title": "System Configuration",
+      "description": "System-wide brand logos and preferences",
+      "type": "object",
+      "properties": {
+        "logoDataUrl": { "type": "string" },
+        "updatedAt": { "type": "number" },
+        "aspectRatio": { "type": "number" },
+        "fileName": { "type": "string" }
+      },
+      "required": ["logoDataUrl", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/tasks_kmc_v1/{taskId}": {
+      "schema": { "$ref": "#/entities/tasks" },
+      "description": "WBS Tasks collection"
+    },
+    "/activity_logs_kmc_v1/{logId}": {
+      "schema": { "$ref": "#/entities/activity_logs" },
+      "description": "Activity logs collection"
+    },
+    "/system_config/{configId}": {
+      "schema": { "$ref": "#/entities/system_config" },
+      "description": "System branding and global config"
     }
   }
 }

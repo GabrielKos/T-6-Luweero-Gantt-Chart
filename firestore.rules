@@ -10,6 +10,9 @@ service cloud.firestore {
     match /activity_logs_kmc_v1/{logId} {
       allow read, write: if true;
     }
+    match /system_config/{configId} {
+      allow read, write: if true;
+    }
     match /{document=**} {
       allow read, write: if true;
     }

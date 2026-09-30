@@ -1,7 +1,8 @@
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import { WBSTask, ViewOption } from '../types';
-import { PLANT_BACKGROUND, RADI_LOGO } from '../assets/plantBackground';
+import { PLANT_BACKGROUND } from '../assets/plantBackground';
+import { getActiveLogoImage } from './branding';
 import {
   buildSummary,
   countStatuses,
@@ -85,13 +86,13 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
   const s = buildSummary(tasks, simulationDate);
   const [bg, logo] = await Promise.all([
     loadImage(PLANT_BACKGROUND).catch(() => null),
-    loadImage(RADI_LOGO).catch(() => null)
+    getActiveLogoImage().catch(() => null)
   ]);
 
   const W = 1160;
   const margin = 30;
   const gap = 18;
-  const headerH = 132;
+  const headerH = 144;
   const heroH = 148;
   const kpiH = 96;
   const pkgRowH = 44;
@@ -210,22 +211,37 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
 
   /* ================= HEADER ================= */
   ctx.textBaseline = 'alphabetic';
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
-  // Real logo on a white pill, matching the in-app header. The asset is
-  // served same-origin (public/assets), so drawing it here never taints the
-  // canvas the way the old Google-Drive-hosted bitmap would have.
-  const logoPillH = 46;
-  const logoPillY = margin - 4;
+  // Real logo on a filleted white badge matching the in-app header.
+  // The badge has smooth filleted corners (not a circle pill or a sharp square).
+  const badgeH = 88;
+  const badgeY = (headerH - badgeH) / 2;
   let titleX = margin + 148;
   if (logo) {
-    const innerH = logoPillH - 16;
+    const innerH = badgeH - 12; // 76px tall on 1x scale, 152px on 2x retina!
     const logoW = innerH * (logo.width / logo.height);
-    const pillW = logoW + 36;
-    roundRectPath(ctx, margin, logoPillY, pillW, logoPillH, logoPillH / 2);
+    const badgeW = Math.max(badgeH, logoW + 20);
+
+    // Smooth filleted badge card with shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(2,6,23,.32)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
+    roundRectPath(ctx, margin, badgeY, badgeW, badgeH, 16);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
-    ctx.drawImage(logo, margin + 18, logoPillY + 8, logoW, innerH);
-    titleX = margin + pillW + 20;
+    ctx.strokeStyle = 'rgba(255,255,255,.9)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw the full logo centered inside the filleted badge with high smoothing quality
+    const logoX = margin + (badgeW - logoW) / 2;
+    const logoY = badgeY + (badgeH - innerH) / 2;
+    ctx.drawImage(logo, logoX, logoY, logoW, innerH);
+    titleX = margin + badgeW + 22;
   } else {
     ctx.fillStyle = '#ffffff';
     ctx.font = '800 22px "Segoe UI",Roboto,Arial,sans-serif';
@@ -236,16 +252,16 @@ export async function exportProgressPng(tasks: WBSTask[], simulationDate: string
   }
   ctx.fillStyle = '#ffffff';
   ctx.font = '750 23px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText('Battery Plant — Overall Progress', titleX, margin + 20);
-  ctx.fillStyle = 'rgba(255,255,255,.68)';
+  ctx.fillText('Battery Plant — Overall Progress', titleX, margin + 26);
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
   ctx.font = '400 12.5px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText('Radi Energy Solutions Battery Plant · Master WorkPlan FY26/27', titleX, margin + 40);
+  ctx.fillText('Radi Energy Solutions Battery Plant · Master WorkPlan FY26/27', titleX, margin + 48);
 
   ctx.save();
   ctx.textAlign = 'right';
   ctx.fillStyle = PALETTE.blueLight;
   ctx.font = '700 10px "Segoe UI",Roboto,Arial,sans-serif';
-  ctx.fillText('PROGRESS SNAPSHOT · ' + todayStamp(), W - margin, margin + 14);
+  ctx.fillText('PROGRESS SNAPSHOT · ' + todayStamp(), W - margin, margin + 18);
   ctx.restore();
 
   let px = titleX;
@@ -421,7 +437,7 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
   /* --- one composited background reused on every page --- */
   const [bgImg, logoImg] = await Promise.all([
     loadImage(PLANT_BACKGROUND).catch(() => null),
-    loadImage(RADI_LOGO).catch(() => null)
+    getActiveLogoImage().catch(() => null)
   ]);
   let bgData: string | null = null;
   if (bgImg) {
@@ -521,19 +537,29 @@ export async function exportActionMatrixPdf(cx: PdfExportContext): Promise<void>
       doc.setFillColor(15, 23, 42); doc.rect(0, 0, pageW, headerH, 'F');
     }
 
-    // Real logo on a white pill, matching the in-app header. Same-origin
-    // asset, so it draws straight in — no cross-origin taint to work around.
+    // Real logo on a white filleted badge, matching the in-app header.
     let textX = margin + 96;
     if (logoImg) {
-      const pillH = 38;
-      const pillY = (headerH - pillH) / 2;
-      const innerH = pillH - 14;
+      const badgeH = 46;
+      const badgeY = (headerH - badgeH) / 2;
+      const innerH = badgeH - 8; // 38 points
       const logoW = innerH * (logoImg.width / logoImg.height);
-      const pillW = logoW + 26;
+      const badgeW = Math.max(badgeH, logoW + 14);
+
+      // Filleted badge with 5pt radius (smooth corners, not a round pill capsule!)
+      doc.saveGraphicsState();
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(margin, pillY, pillW, pillH, pillH / 2, pillH / 2, 'F');
-      doc.addImage(logoImg, 'PNG', margin + 13, pillY + 7, logoW, innerH, undefined, 'FAST');
-      textX = margin + pillW + 14;
+      doc.roundedRect(margin, badgeY, badgeW, badgeH, 5, 5, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.6);
+      doc.roundedRect(margin, badgeY, badgeW, badgeH, 5, 5, 'S');
+      doc.restoreGraphicsState();
+
+      // High quality rendering
+      const logoX = margin + (badgeW - logoW) / 2;
+      const logoY = badgeY + (badgeH - innerH) / 2;
+      doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, innerH, undefined, 'SLOW');
+      textX = margin + badgeW + 16;
     } else {
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
